@@ -11,7 +11,7 @@ happens.
 | **M1** | **Catalogue** | Finds the images and shows them: scanner, SQLite catalogue, thumbnails, Sources and Browse. Specified below. |
 | **M2** | **Judgement** | Decides which images actually work as wallpapers: scoring, badges, duplicates, Image page. Specified below. |
 | **M3** | **Previews** | Shows the result before it happens: transform pipeline, Cairo compositor for all five screens, capability probes. Specified below. |
-| M4 | Apply (user space) | Planner, backups, verification, rollback, History/undo; desktop + lock on Cinnamon, GNOME, MATE, Xfce, Plasma |
+| **M4** | **Apply (user space)** | The transaction engine, proven where no root is needed: desktop + lock on five desktops, with undo. Specified below. |
 | M5 | Apply (privileged) | One-shot `pkexec` helper + polkit actions; login screen, boot splash, boot menu — the base script, end to end; `linwp` CLI and `doctor` |
 | M6 | Breadth + release | GDM/SDDM providers, dracut back end, five distribution fake roots, sync mode, collections, `.deb`, first release |
 | M7 | More surfaces | LXQt/Pantheon/Budgie, per-monitor and Wayland refinements, online scan sources |
@@ -613,6 +613,166 @@ apply; screenshot-based previews of the actual greeter stay a later idea (§17.2
 
 ## After M3
 
-M4 makes it real where it is safe to: the apply planner, backups, verification, rollback and History/undo,
-with the desktop and lock screen applied end to end on Cinnamon, GNOME, MATE, Xfce and Plasma — still with
-no root, still nothing enabled in the background.
+M4 makes it real where it is safe to — specified below.
+
+---
+
+# M4 — Apply (user space)
+
+**Goal:** build the whole apply transaction — plan, precheck, backup, write, verify, commit or roll back,
+undo — and prove it on the two surfaces that need no privileges. When M5 adds root, it adds *providers*, not
+a new mechanism.
+
+**Demo at the end of M4:** choose an image, press Apply, see the exact steps first, watch the desktop change,
+and press Undo to get the previous wallpaper back — on Cinnamon, and against fake backends for GNOME, MATE,
+Xfce and Plasma. The History page lists every apply with its result and backup, and `linwp apply --surface
+desktop,lock` does the same from a terminal.
+
+### In scope
+The plan model and planner, the executor with its transaction phases, the backup manifest and undo, drift
+detection, verification, the apply sheet and result UI, the History page, and the desktop + lock providers
+for Cinnamon, GNOME, MATE, Xfce and Plasma.
+
+### Not in scope
+Anything privileged: greeter, Plymouth, GRUB, the helper, polkit, `/var/backups` — all M5. Sync mode (M6).
+**M4 must still run without ever calling `sudo` or `pkexec`**, and a test asserts it.
+
+---
+
+## M4.1 — The plan model
+
+- [ ] `apply/plan.py` — `Step` (typed op, target, payload hash, estimated duration, `needs_root`, its own
+      inverse) and `Plan` (ordered steps, the image, options, the surfaces, totals)
+- [ ] `plan()` is **pure**: no side effects, safe to call on every selection change, and cheap enough to power
+      the "Show what this will do" sheet live
+- [ ] A step that cannot describe its own inverse cannot be planned — enforced in the constructor, not by review
+- [ ] Batching rules encoded here, not in providers: expensive shared steps (from M5: one `update-initramfs`,
+      one `update-grub`) are emitted once, at the end
+- [ ] Plans serialise to JSON — the same structure the sheet renders, the CLI prints (`linwp plan --json`) and
+      M5 hands to the helper on stdin
+- [ ] A plan carries the transform's parameters and output hash from M3's render cache, so the apply installs
+      exactly the bytes that were previewed
+
+## M4.2 — The executor and its phases
+
+- [ ] `apply/executor.py` implementing the concept's §10 sequence: **precheck → backup → write → verify →
+      commit | rollback**, with per-step progress events
+- [ ] **Precheck:** image decodable, options valid, target providers still detected, free space, no concurrent
+      apply (a lock file in `$XDG_RUNTIME_DIR`), and — from M5 — `/boot` writability and polkit
+- [ ] **Write:** user-space writes go through the provider; file writes (later) are temp-file → `fsync` →
+      `rename` in the destination filesystem
+- [ ] **Verify:** read the value back from the authority (not from cache) and compare with what was intended
+- [ ] **Rollback:** any failed step restores the backup for every step already applied, in reverse order, then
+      reports which step failed and why; a partial apply is never left behind
+- [ ] Idempotence: a step whose target already holds the intended value is skipped and reported as "already set"
+- [ ] Every apply writes an `apply_event` row (M1 schema) with the plan, result, timings and the backup reference
+
+## M4.3 — Backups, undo and drift
+
+- [ ] `apply/backup.py` — a manifest per apply in `~/.local/share/lin-wallpapers/backups/<timestamp>/`:
+      for user-space surfaces the captured settings keys and values, with types; for files (M5) path, mode,
+      owner, sha256. The layout is identical for both, so M5 only adds a second root (`/var/backups/...`)
+- [ ] `linwp undo` / the Undo button replay the manifest in reverse: restore values, re-verify, record a new
+      `apply_event` of kind `undo`
+- [ ] **Drift detection:** if the current value is not what this app applied (the user changed the wallpaper
+      by hand afterwards), undo says so and asks — restore anyway, or cancel. It never silently clobbers.
+- [ ] Undo of an undo is just another apply; the History page reads as a stack, not a mystery
+- [ ] Backup retention policy in Settings (keep N applies, default 20), with pruning that never removes the
+      backup of the currently applied state
+
+## M4.4 — Desktop providers
+
+Each implements `plan/apply/verify/revert` over its own mechanism, declares `supports_per_monitor`, and never
+touches another desktop's settings.
+
+- [ ] `desktop_cinnamon` — `org.cinnamon.desktop.background` `picture-uri` + `picture-options`
+- [ ] `desktop_gnome` — `org.gnome.desktop.background` `picture-uri` **and** `picture-uri-dark` (both, or the
+      wallpaper reverts when the dark theme is active), plus `picture-options`
+- [ ] `desktop_mate` — `org.mate.background` `picture-filename` (a plain path, not a URI) + `picture-options`
+- [ ] `desktop_xfce` — `xfconf-query -c xfce4-desktop`, enumerating `.../last-image` properties per monitor and
+      workspace, writing each, and reporting how many were set
+- [ ] `desktop_plasma` — `plasma-apply-wallpaperimage`, falling back to the scripted `org.kde.PlasmaShell`
+      D-Bus call; both paths verified by reading the config back
+- [ ] Slideshow safety: if the desktop is currently running a wallpaper slideshow, the plan says that applying
+      replaces it, and the backup captures the slideshow setting so undo restores it
+- [ ] Per-monitor: where supported, apply to all outputs by default, with the option to pick one
+
+## M4.5 — Lock-screen providers
+
+- [ ] `lock_cinnamon` — reports "follows the desktop" (the base script's finding) and plans **no step** unless
+      the user asks for a different image, in which case `org.cinnamon.desktop.screensaver` is written
+- [ ] `lock_gnome` — `org.gnome.desktop.screensaver picture-uri`
+- [ ] `lock_xfce` — `xfce4-screensaver` settings where present; otherwise reported unsupported with the reason
+- [ ] `lock_plasma` — `kscreenlockerrc` through the KDE config tooling, user-scope only
+- [ ] When the lock screen follows the desktop, the UI says so instead of showing a redundant success
+
+## M4.6 — Apply UI
+
+- [ ] The apply sheet from the mockup: image, target surfaces, the full step list with durations and
+      `needs_root` markers, the warning lines, Cancel / Apply
+- [ ] Progress per step, with the current step named; cancel between steps (never mid-write)
+- [ ] Result state: per-surface ✓/✗ with when each takes effect, the backup path, Undo, and — for failures —
+      the failing step, the reason and the rollback outcome
+- [ ] The Screens page's Apply and Revert buttons become live for desktop and lock; the three privileged
+      surfaces keep their disabled state and now say "M5"
+- [ ] History page: the apply list with thumbnails, surfaces, result badges, and per-row Undo / Re-apply /
+      "Show manifest"
+
+## M4.7 — CLI
+
+- [ ] `linwp plan <image> --surface desktop,lock [--json]` — print the plan, change nothing
+- [ ] `linwp apply <image> --surface desktop,lock [--mode fill] [--dry-run]`
+- [ ] `linwp undo [--id N]`, `linwp history [--json]`
+- [ ] Exit codes distinguish success, "nothing to do" (idempotent), "precheck failed", "failed and rolled
+      back", and "refused by the user"; documented in `--help` and the README
+
+## M4.8 — Tests
+
+- [ ] **Fake backends:** an in-memory GSettings/xfconf/Plasma double so all five desktop providers are tested
+      without those desktops installed; the real backend is exercised on the reference machine (Cinnamon)
+- [ ] **Transaction tests:** failure injected at each phase → full rollback, consistent state, correct report
+- [ ] **Crash test:** the process is killed between steps → the next run detects the incomplete apply from its
+      journal and offers to finish or roll back
+- [ ] **Idempotence:** applying the same image twice produces "already set" for every step the second time
+- [ ] **Undo tests:** exact restoration, drift detection, undo-after-manual-change, undo of an undo
+- [ ] **No-privilege test:** the whole M4 surface runs under a wrapper that fails if `sudo`, `pkexec`,
+      `systemd-run` or a write outside `$HOME` is attempted
+- [ ] **Plan/apply agreement:** a property test asserting the executed steps equal the planned steps, in order
+
+### Deferred out of M4 (on purpose)
+Everything requiring root, and sync mode. The plan JSON is already shaped for the helper, so M5 adds
+`needs_root` execution behind `pkexec` without changing the model.
+
+---
+
+## M4 acceptance criteria
+
+1. Apply and undo work end to end on the reference machine for desktop and lock, with the previous wallpaper
+   restored exactly.
+2. The sheet shows the real plan before anything is written, and the executed steps match it exactly.
+3. A failure injected at any phase leaves the machine in its pre-apply state, with a report naming the step.
+4. Applying the same image twice is a no-op the second time, reported as "already set".
+5. Undo detects drift (a wallpaper changed by hand afterwards) and asks instead of clobbering.
+6. All five desktop providers pass against their fake backends; Cinnamon also passes against the real one.
+7. GNOME sets both the light and dark keys; MATE gets a path, not a URI; Xfce reports how many monitor and
+   workspace properties it wrote; Plasma verifies by reading back.
+8. History lists every apply and undo with its backup, and the manifest can be shown.
+9. **No `sudo`, no `pkexec`, no write outside `$HOME`** anywhere in M4 — enforced by the test wrapper.
+10. `linwp plan|apply|undo|history` match the GUI, with `--json` and documented exit codes.
+
+## M4 risks
+
+| Risk | Mitigation |
+| --- | --- |
+| The desktop writes the setting back (its own settings dialog is open, or a slideshow ticks) | Verify by reading back after a short settle; if it changed, report it rather than fighting; slideshow state is captured and restored by undo |
+| GNOME's dark-variant key is forgotten and the wallpaper "reverts at night" | Both keys are part of one step; a test asserts both are written and verified |
+| Xfce's per-monitor/workspace property explosion leaves some screens unchanged | Enumerate rather than guess, write all, and report the count in the result |
+| Plasma tooling differs between versions | `plasma-apply-wallpaperimage` first, scripted D-Bus fallback, both verified by config read-back; unsupported versions say so |
+| Undo becomes unreliable once the user edits things by hand | Drift detection, manifests that record what was expected, and a History page that reads as a stack |
+| The transaction engine gets rewritten for root in M5 | M4 deliberately builds the *whole* engine; M5 adds providers and one execution backend, and the plan JSON is already the helper's input format |
+
+## After M4
+
+M5 adds the privileged half: the one-shot `pkexec` helper, polkit actions, and the login screen, boot splash
+and boot menu — the base script, end to end, with the same plan, backup, verify and undo the desktop already
+uses.
