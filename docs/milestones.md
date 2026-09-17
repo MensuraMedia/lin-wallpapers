@@ -14,7 +14,7 @@ happens.
 | **M4** | **Apply (user space)** | The transaction engine, proven where no root is needed: desktop + lock on five desktops, with undo. Specified below. |
 | **M5** | **Apply (privileged)** | The base script, end to end, through a one-shot helper: login screen, boot splash, boot menu. Specified below. |
 | **M6** | **Breadth, explanation, release** | Works and explains itself everywhere: more providers, capability states and the activity log, sync mode, packaging, v1.0. Specified below. |
-| M7 | More surfaces | LXQt/Pantheon/Budgie, per-monitor and Wayland refinements, online scan sources |
+| **M7** | **Reach** | More desktops, greeters and boot managers, per-monitor wallpapers, Wayland, optional online sources — all as providers. Specified below. |
 | M8 | GTK 4 | Flip `gtk_version.py`, `Gtk.GridView` grid, drop the compatibility shims |
 
 **Standing rules for every milestone** (from [TECHNICAL-CONCEPT.md §17](../TECHNICAL-CONCEPT.md) and
@@ -1134,6 +1134,158 @@ LXQt/Pantheon/Budgie desktops, per-monitor and Wayland refinements, and online s
 
 ## After M6
 
-M7 widens reach again — LXQt, Pantheon and Budgie, per-monitor and Wayland refinements, online scan sources —
-each arriving as a provider with its own reason codes, greyed-out state and fake-root test, changing nothing
-in the core.
+M7 widens reach again — specified below.
+
+---
+
+# M7 — Reach
+
+**Goal:** prove the architecture by growing without touching it. Every item in M7 is a **provider** plus its
+reason codes, greyed-out state and fake-root test. If any of it requires editing the planner, the executor,
+the helper's operation list or the capability core, the design was wrong and that is the finding worth
+having.
+
+**Demo at the end of M7:** the same v1.x package on Lubuntu, elementary and Ubuntu Budgie sets the desktop
+correctly; a two-monitor machine gets a different wallpaper per screen, cropped for each panel's own
+geometry; a GNOME Wayland session applies everything it can and explains the rest; and an online source can
+be switched on, used, and switched off with no trace.
+
+### In scope
+Desktop providers for LXQt, Pantheon and Budgie; greeter and boot-manager providers whose honest answer is
+often "unsupported, and here is why"; per-monitor wallpapers end to end; Wayland behaviour made explicit;
+optional online scan sources; and the internationalisation groundwork that the reason-code catalogue makes
+cheap.
+
+### Not in scope
+The GTK 4 port (M8). No new privileged operations: if an item cannot be done with the helper's existing
+allow-list, it is reported unsupported rather than granted new powers.
+
+---
+
+## M7.1 — More desktops
+
+- [ ] `desktop_lxqt` — `pcmanfm-qt` desktop configuration (per-screen `wallpaper` keys), with the LXQt
+      session detected by evidence, not by distribution
+- [ ] `desktop_pantheon` — elementary's background settings, including its own light/dark handling; where a
+      key is managed by the shell, report `OWNED_BY_OTHER` rather than writing and hoping
+- [ ] `desktop_budgie` — the GNOME background schema as Budgie uses it, with Budgie-specific detection
+      evidence so it is not mistaken for GNOME Shell
+- [ ] Matching `lock_*` providers where the session has its own locker; otherwise the lock surface reports
+      "follows the desktop" or an honest `COMPONENT_NOT_DETECTED`
+- [ ] Each ships: detection evidence, capabilities, plan/apply/verify/revert, preview spec, reason codes,
+      fake-root golden test, and its row in the §4.2 matrix
+
+## M7.2 — More greeters and boot managers
+
+- [ ] `greeter_lxdm`, `greeter_greetd` — configurable where the greeter supports a background; `degraded` or
+      `COMPONENT_NOT_DETECTED` with evidence where it does not. A greeter the app cannot configure is still
+      *listed*, greyed, and explained
+- [ ] `bootmenu_systemd_boot` — detected properly and reported `OWNED_BY_OTHER`: systemd-boot has no
+      background image, so the surface stays visible, greyed, and says exactly that (this is the reference
+      example of a first-class "unsupported" outcome, not a gap)
+- [ ] `bootmenu_refind` — background theming where the installation allows it, verified by config read-back
+- [ ] No new helper operations: every one of these uses `write_system_image`, `edit_ini`, `write_dropin`,
+      `regen_bootmenu` as they already exist — a test asserts the helper's operation list is unchanged
+
+## M7.3 — Per-monitor wallpapers
+
+- [ ] Model: an apply targets a set of `(output, image, options)` rather than a single image; one image
+      across all outputs stays the default and the simple path
+- [ ] Transform per output: each monitor gets its own crop for its own geometry, so a 16:9 laptop panel and a
+      21:9 external screen each look right; the focal point is stored per image **and** per output override
+- [ ] UI: the Screens page gains a monitor strip when more than one output exists; drag an image onto a
+      monitor to assign it; the Preview page previews per output
+- [ ] Providers declare `supports_per_monitor`; where false (`desktop_mate`, some Plasma versions), the
+      control is greyed with `PER_MONITOR_UNSUPPORTED` and the plan explains that one image will be used
+- [ ] The privileged surfaces are explicitly single-image: the greeter, splash and boot menu render at one
+      geometry, and the UI says which monitor's crop is used and lets the user choose
+- [ ] Hot-plug: connecting or removing a monitor re-resolves capability, re-scores (M2) and updates previews
+      in place
+
+## M7.4 — Wayland
+
+- [ ] Session detection is already in place (M3); M7 makes every difference explicit and tested rather than
+      assumed
+- [ ] Desktop and lock providers that work identically under Wayland (GNOME, Plasma) are verified there;
+      output enumeration comes from `Gdk.Monitor`, never `xrandr`
+- [ ] Where something genuinely cannot work in a Wayland session, it reports `SESSION_UNSUPPORTED` with the
+      component named — and the same feature stays available on X11 without a separate code path
+- [ ] The boot splash and boot menu are unaffected by the session type, and the UI says so, since users
+      reasonably assume Wayland breaks everything
+- [ ] The live splash check (M5) is offered only where a VT is available, with the reason otherwise
+
+## M7.5 — Online sources (optional, opt-in)
+
+- [ ] `ScanSource` providers for online galleries, disabled by default and invisible in the catalogue until
+      enabled — the app makes **no network call whatsoever** until the user turns one on (the M6 no-network
+      test stays green in the default configuration)
+- [ ] Downloads land in a user-chosen folder and enter the catalogue like any local file; nothing is cached
+      invisibly, and the source, licence and attribution are stored with the row and shown on the Image page
+- [ ] Safety: HTTPS only, content-type and magic-byte validation, size and dimension limits, decode budget,
+      no execution of anything downloaded, no redirects to local addresses
+- [ ] Rate and bandwidth limits, cancellable downloads, and a clear per-source on/off with "forget everything
+      from this source"
+- [ ] The privacy line stays absolute: no telemetry, no analytics, no phoning home — only the gallery request
+      the user explicitly asked for
+
+## M7.6 — Internationalisation
+
+- [ ] `gettext` throughout, with the reason-code catalogue (§15.2) as the natural extraction point: message
+      templates are translated, evidence strings stay verbatim
+- [ ] `xgettext` extraction and `.mo` compilation in the build; a CI check that no user-facing string is
+      concatenated at runtime (which would make it untranslatable)
+- [ ] Locale-aware numbers, dates and file sizes; RTL layout checked on one screen per page
+- [ ] Translator notes on anything ambiguous ("Fill" as a crop mode, not a verb)
+
+## M7.7 — Tests
+
+- [ ] **Core-untouched test:** adding an M7 provider changes no file in `apply/planner.py`,
+      `apply/executor.py`, `capability/`, or the helper's operation list — asserted by an architecture test
+      that forbids core modules from importing provider modules, plus a review check on the diff
+- [ ] New fake-root shapes: Lubuntu (LXQt/SDDM), elementary (Pantheon/LightDM), Ubuntu Budgie, a
+      systemd-boot machine, and a GNOME Wayland session
+- [ ] Per-monitor matrix: 1, 2 and 3 outputs at different resolutions and scales; hot-plug during an apply is
+      refused cleanly with a reason
+- [ ] Wayland runs for GNOME and Plasma shapes, asserting which surfaces are available and which report
+      `SESSION_UNSUPPORTED`
+- [ ] Online-source tests against a local fixture server: opt-in gate, validation rejects (wrong type, too
+      large, redirect to localhost), attribution stored, "forget source" leaves nothing
+- [ ] Localisation smoke test with a pseudo-locale: no truncated labels, no untranslated user-facing strings,
+      RTL renders
+
+---
+
+## M7 acceptance criteria
+
+1. LXQt, Pantheon and Budgie desktops apply and revert correctly on their fake roots, and on at least one
+   real installation each (VM), with evidence-based detection.
+2. A greeter or boot manager the app cannot configure — systemd-boot being the canonical case — remains
+   visible and greyed with an accurate `OWNED_BY_OTHER` explanation, and never causes a failure elsewhere.
+3. Per-monitor wallpapers work on the desktops that support it, each output cropped for its own geometry;
+   where unsupported, the control is greyed with the reason and the plan states what will happen instead.
+4. The privileged surfaces clearly state which monitor's crop they use, and let the user change it.
+5. GNOME and Plasma Wayland sessions apply everything they can; anything else reports `SESSION_UNSUPPORTED`
+   with the component named; the boot surfaces are unaffected and the UI says so.
+6. With no online source enabled, the app makes no network connection — the M6 test still passes unchanged.
+7. Enabling a source, downloading, and then "forget this source" leaves no files, rows or settings behind.
+8. The helper's operation list, the planner and the executor are unchanged by M7 — the architecture test passes.
+9. Every new provider ships detection evidence, reason codes, a greyed-out state, a preview spec, a
+   fake-root golden test and its matrix row.
+10. A pseudo-locale run shows no untranslated user-facing string and no broken layout.
+
+## M7 risks
+
+| Risk | Mitigation |
+| --- | --- |
+| Breadth turns into an endless provider backlog | M7 ships exactly the providers listed; anything else is a later minor release, and each is a self-contained module |
+| Per-monitor multiplies the state space | One image everywhere stays the default; per-output overrides are explicit; the matrix test covers 1–3 outputs with mixed scales |
+| Wayland differences get papered over | Differences are reason codes with evidence and tests, never silent no-ops |
+| Online sources drag in privacy, licensing and safety problems | Off by default, no call until enabled, HTTPS with validation and limits, licence and attribution stored and shown, one-click forget |
+| A new provider needs "just one more" helper operation | Refused: report unsupported instead; the operation list is fixed and asserted by test. Widening it is a separate, reviewed decision |
+| Translations lag the reason catalogue | Messages are templates in one catalogue; CI fails on runtime-concatenated strings |
+
+## After M7
+
+M8 is the port: flip `gtk_version.py` to GTK 4, swap the recycling `Gtk.FlowBox` for `Gtk.GridView` behind
+the grid component, drop the `compat` shims the lint has been protecting, and verify that every provider,
+preview and apply path behaves identically — no feature work, no new surfaces.
