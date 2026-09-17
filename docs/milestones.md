@@ -12,7 +12,7 @@ happens.
 | **M2** | **Judgement** | Decides which images actually work as wallpapers: scoring, badges, duplicates, Image page. Specified below. |
 | **M3** | **Previews** | Shows the result before it happens: transform pipeline, Cairo compositor for all five screens, capability probes. Specified below. |
 | **M4** | **Apply (user space)** | The transaction engine, proven where no root is needed: desktop + lock on five desktops, with undo. Specified below. |
-| M5 | Apply (privileged) | One-shot `pkexec` helper + polkit actions; login screen, boot splash, boot menu — the base script, end to end; `linwp` CLI and `doctor` |
+| **M5** | **Apply (privileged)** | The base script, end to end, through a one-shot helper: login screen, boot splash, boot menu. Specified below. |
 | M6 | Breadth + release | GDM/SDDM providers, dracut back end, five distribution fake roots, sync mode, collections, `.deb`, first release |
 | M7 | More surfaces | LXQt/Pantheon/Budgie, per-monitor and Wayland refinements, online scan sources |
 | M8 | GTK 4 | Flip `gtk_version.py`, `Gtk.GridView` grid, drop the compatibility shims |
@@ -773,6 +773,193 @@ Everything requiring root, and sync mode. The plan JSON is already shaped for th
 
 ## After M4
 
-M5 adds the privileged half: the one-shot `pkexec` helper, polkit actions, and the login screen, boot splash
-and boot menu — the base script, end to end, with the same plan, backup, verify and undo the desktop already
-uses.
+M5 adds the privileged half — specified below.
+
+---
+
+# M5 — Apply (privileged)
+
+**Goal:** the product's reason to exist. The login screen, boot splash and boot menu change from one click,
+through a one-shot helper, with one authorization — reproducing exactly what
+[`reference/apply-08-screen-wallpaper.sh`](../reference/README.md) does by hand, inside M4's transaction.
+
+**Demo at the end of M5:** press *Apply everywhere*, authorize once, watch eleven steps run in about
+25 seconds, log out to a new login screen and reboot into a new boot menu and splash — then press Undo and
+get the distribution's defaults back. `linwp apply <image> --surface all` does the same from a TTY.
+
+### In scope
+The one-shot `pkexec` helper and its allow-listed operations, the polkit actions and authorization flow, the
+greeter providers (slick-greeter, lightdm-gtk-greeter), the Plymouth provider (initramfs-tools), the GRUB
+provider, the boot-safety net, `/var/backups` manifests, the live splash check, and `linwp doctor` in full.
+
+### Not in scope
+GDM and SDDM greeters, the dracut back end, and the remaining distribution shapes — M6, and they are new
+providers behind the same helper operations. Sync mode is M6.
+
+---
+
+## M5.1 — The helper
+
+- [ ] `/usr/libexec/lin-wallpapers-helper` — a one-shot executable: reads one plan as JSON on stdin,
+      performs it, writes a JSON result on stdout, exits. **No daemon, no D-Bus name, no service unit**
+      (concept §11.1–11.2)
+- [ ] Allow-listed operations only: `probe`, `write_system_image`, `edit_ini`, `install_theme`,
+      `set_alternative`, `write_dropin`, `regen_initramfs`, `regen_bootmenu`, `revert_backup`. No
+      "write this file" primitive, no operation taking a shell command or a destination path — destinations
+      are constants in the helper, checked with `realpath` against an allow-list
+- [ ] Input is re-validated, never trusted: the image arrives as a file descriptor with a declared sha256; the
+      helper re-hashes, re-decodes under a pixel/time budget, and **re-runs the transform itself**
+- [ ] Subprocesses: absolute paths, argument vectors, fixed environment, timeouts, no shell — only
+      `update-initramfs`/`dracut`, `update-grub`/`grub-mkconfig`, `update-alternatives`, `plymouthd`/`plymouth`
+- [ ] In-process hardening: `umask 022`, dropped ambient capabilities, `NoNewPrivileges` via `prctl`, work in a
+      `mkdtemp` under `/var/tmp` that it removes; optional `systemd-run --scope` wrapper where systemd exists
+- [ ] Structured progress on stderr (one JSON line per step) so the GUI shows real progress, and everything
+      lands in the journal for a post-mortem
+- [ ] Exit codes: success, refused, precheck failed, failed-and-rolled-back, failed-and-rollback-failed (the
+      last one is the only case that ever asks the user to act, and it names the backup directory)
+
+## M5.2 — Authorization
+
+- [ ] Four polkit actions — `…apply.login-screen`, `…apply.boot-splash`, `…apply.boot-menu`, `…revert` —
+      with clear message strings; default `auth_admin_keep`
+- [ ] **One prompt per apply:** a five-surface apply is one plan, one helper run, one authorization
+- [ ] No polkit agent, or authorization refused → the plan stops before any write, the sheet says so, and
+      Retry is offered. Nothing half-applied, no password ever handled by the app
+- [ ] `linwp` from a TTY uses `pkexec` the same way, or runs directly when already root (a plain
+      `sudo linwp apply` must work for recovery)
+- [ ] The polkit rule that sync mode (M6) may install is **not** written here; M5 only ever prompts
+
+## M5.3 — Greeter providers
+
+- [ ] `greeter_slick` — render to `/usr/share/backgrounds/lin-wallpapers/wallpaper.jpg` (dir 0755, file 0644,
+      root-owned), then `background=` and `draw-user-backgrounds=false` in `/etc/lightdm/slick-greeter.conf`
+- [ ] `greeter_lightdm_gtk` — the same image, `[greeter] background=` in `/etc/lightdm/lightdm-gtk-greeter.conf`
+- [ ] The INI editor from the base script (`set_ini`/`del_ini`): create the file and section when missing,
+      replace in place otherwise, never reformat the rest of the file, never touch `lightdm.conf` (a conffile)
+- [ ] **Verification that matters:** re-read the config, resolve the path, and confirm the file is readable
+      *as the greeter's user* (`lightdm`) — the failure mode this product exists to prevent is a grey login screen
+- [ ] Revert: delete the two keys, remove the installed image, leave the file otherwise untouched
+
+## M5.4 — Plymouth provider
+
+- [ ] Generate the theme into `/usr/share/plymouth/themes/lin-wallpapers/` from
+      `resources/plymouth-template/` — the `.plymouth` manifest, the script (background sprite at z = −100,
+      spinner at 75 % height, password/question/message callbacks) and the rendered `wallpaper.png`
+- [ ] Spinner frames: copied from whichever theme `default.plymouth` currently resolves to (`mint-logo`,
+      `bgrt`, `spinner`, …); if it has none, draw a fallback spinner from the accent colour. Copied frames stay
+      under their own licences ([NOTICE](../NOTICE))
+- [ ] `update-alternatives --install … default.plymouth … 150` then `--set` — the base script's exact pair
+- [ ] Initramfs behind an interface (`InitramfsBackend`): `initramfs-tools` in M5 (`update-initramfs -u -k all`),
+      dracut in M6. Whichever owns `/boot/initrd.img-*` is chosen by probe
+- [ ] **Verification:** for every installed kernel, the rebuilt image contains the theme's `.plymouth`, its
+      script and `wallpaper.png` (`lsinitramfs | grep`) — the check that was done by hand after the base script ran
+- [ ] Revert: alternative back to the previous theme recorded in the manifest, theme directory removed,
+      initramfs rebuilt again, verified again
+- [ ] Live check: `plymouthd` + `plymouth --show-splash`, 8 s, `plymouth quit` — offered after an apply, never
+      automatic, and skipped when a session is not on a VT that can show it
+
+## M5.5 — GRUB provider
+
+- [ ] Render the 8-bit PNG to `/boot/grub/lin-wallpapers.png` at the detected `GRUB_GFXMODE`
+- [ ] Write `/etc/default/grub.d/99-lin-wallpapers-background.cfg` (`GRUB_BACKGROUND`, `GRUB_GFXMODE`) — only
+      when it differs (`cmp -s`), and **never** `/etc/default/grub`, which is a package conffile
+- [ ] Regenerate with `update-grub`, or `grub-mkconfig -o <detected grub.cfg>` where that is what exists
+      (BIOS, EFI, and vendor paths under `/boot/efi/EFI/<vendor>/`)
+- [ ] Verification: `grub.cfg` is newer than the drop-in and references the image; the PNG decodes under
+      GRUB's constraints (colour count, size)
+- [ ] Revert: drop-in and image removed, `grub.cfg` regenerated, verified
+
+## M5.6 — Boot safety net
+
+- [ ] **Validate before installing:** the generated theme is rendered offscreen and the GRUB PNG decoded; a
+      failure aborts before anything is written
+- [ ] Prechecks: `/boot` writable and with free space for every kernel's initramfs, no `apt`/`dpkg` lock held,
+      kernels enumerated, current alternative recorded
+- [ ] **Order:** all file writes first, the two expensive regenerations last, one of each per apply
+- [ ] Cancellation is refused *during* an initramfs rebuild (the one step that must not be interrupted), and
+      the UI says why
+- [ ] If the rebuild fails: restore the previous alternative, rebuild again, verify, and report — the machine
+      must never be left with a theme that is not in its initramfs
+- [ ] `docs/recovery.md` and an in-app panel: remove `splash` from the kernel line in the boot menu for one
+      boot, then `sudo linwp undo`; the base script's `--undo` remains the backstop
+- [ ] Release checklist (`docs/release-checklist.md`): the one thing CI cannot do — a real reboot on the
+      reference machine, plus a VM per distribution shape — run and signed off per release
+
+## M5.7 — Apply everywhere
+
+- [ ] One plan covering all five surfaces: user-space steps executed in-process (M4), privileged steps handed
+      to a single helper run, expensive steps batched once
+- [ ] Progress across the whole apply, with the initramfs step showing its own longer estimate
+- [ ] The result panel verifies all five and states when each takes effect; History rows reference the
+      `/var/backups/lin-wallpapers/<timestamp>/` manifest
+- [ ] Undo spans both halves: user settings restored in-process, privileged files restored by the helper under
+      the `…revert` action, with the same drift detection M4 introduced
+
+## M5.8 — CLI and doctor
+
+- [ ] `linwp apply <image> --surface all|login|splash|menu`, `linwp undo`, `linwp plan --json` — the privileged
+      half wired to the same code the GUI uses
+- [ ] `linwp doctor` in full: the machine model, every provider's verdict and evidence, privileged prechecks
+      (polkit agent, `/boot` space and writability, kernels, initramfs generator, GRUB path), and what would
+      block each surface. `--json` is the bug-report format, and it seeds a new fake root
+- [ ] `linwp preview --surface splash --live` runs the 8-second splash check
+
+## M5.9 — Tests
+
+- [ ] **Fake-root integration:** apply and revert into `tests/fakeroot/<shape>/` with fake `update-initramfs`,
+      `update-grub` and `update-alternatives` binaries that record their arguments; assert the resulting tree,
+      the recorded commands, and the rolled-back tree
+- [ ] **Helper unit tests:** malformed plans rejected, unknown operations rejected, destinations outside the
+      allow-list rejected, path traversal rejected, mismatched sha256 rejected, no shell ever invoked
+- [ ] **Failure injection** at each privileged step, including a failing initramfs rebuild, asserting restore
+      of the previous alternative and a successful second rebuild
+- [ ] **Verification tests:** a greeter image that `lightdm` cannot read fails verification; a theme missing
+      from one kernel's initramfs fails verification
+- [ ] **Conffile test:** no package conffile is modified during any apply (`dpkg --verify` clean afterwards)
+- [ ] **Nothing left running:** after an apply, no helper process exists and no unit was created
+- [ ] Container/VM runs for at least Mint Cinnamon and Debian Xfce shapes; the real-reboot checklist covers
+      what containers cannot
+
+### Deferred out of M5 (on purpose)
+GDM and SDDM, dracut, and the remaining fake-root shapes (M6). They add providers and one backend behind the
+same helper operations — no new mechanism, no new privilege.
+
+---
+
+## M5 acceptance criteria
+
+1. On the reference machine, *Apply everywhere* reproduces the base script's result exactly: the same
+   greeter keys, the same installed image, the theme selected through `update-alternatives`, the theme
+   present in every kernel's initramfs, the GRUB drop-in and a regenerated `grub.cfg`.
+2. One authorization prompt for the whole apply; refusing it leaves the machine untouched.
+3. Verification runs before commit, and a failure at any step rolls back completely and says which step failed.
+4. Undo restores the distribution defaults, verified the same way, including the initramfs rebuild.
+5. `dpkg --verify` reports no modified conffiles after an apply and after an undo.
+6. A reboot on the reference machine shows the new boot menu and splash, and a logout shows the new login
+   screen — recorded in the release checklist.
+7. The helper rejects malformed plans, unknown operations, traversal attempts and hash mismatches; it never
+   invokes a shell.
+8. After an apply, no helper process is running and nothing was enabled: `pgrep`, `systemctl list-unit-files`
+   and `~/.config/autostart` are all clean.
+9. `linwp apply --surface all` from a TTY (via `pkexec` or as root) matches the GUI, and `linwp doctor --json`
+   explains any surface it would refuse.
+10. Fake-root integration passes for the Mint and Debian Xfce shapes, asserting both the applied tree and the
+    rolled-back tree.
+
+## M5 risks
+
+| Risk | Mitigation |
+| --- | --- |
+| A bad theme or a failed rebuild spoils boot | Offscreen validation before install, initramfs content verification, automatic restore-and-rebuild, `docs/recovery.md`, and the `splash`-removal escape |
+| `/boot` fills during the rebuild | Precheck free space for every kernel; refuse rather than half-write |
+| The greeter shows grey because it cannot read the image | The copy step is part of the plan, and verification re-reads the file as the greeter's user |
+| A package upgrade later overwrites the change | Drop-ins only, never a conffile; `dpkg --verify` in CI |
+| `update-alternatives` fights the distribution's own theme selection | Priority 150 with an explicit `--set`, previous selection recorded in the manifest, and revert restores it |
+| A user cancels mid-rebuild | Cancellation refused during that one step, with the reason shown |
+| The helper becomes a general-purpose root writer over time | Fixed operation list, destinations as constants, no path arguments, review rule in `.claude/rules/privileged-helper.md` |
+| CI cannot prove a real boot | Documented per-release reboot checklist on the reference machine plus VM runs per distribution shape |
+
+## After M5
+
+M6 widens the same machinery: GDM and SDDM, the dracut back end, the remaining distribution fake roots, then
+sync mode, collections and slideshows, `.deb` packaging with AppStream metadata, and the first release.
