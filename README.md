@@ -18,6 +18,11 @@ of each screen before anything changes, and one-click undo after.
 | Design reference | `universal-themes/image-reference/ui-kit-yellow-gray-yello.jpg` (dark navy-gray, one yellow accent) |
 | License | Free to use, modify and distribute. **Commercial use requires prior written permission.** ([LICENSE](LICENSE), [NOTICE](NOTICE)) |
 
+![Browse — the image catalogue with suitability scores and badges](docs/mockups/png/Main.png)
+
+*Mockup: the Browse page. More screens — image detail, the five surfaces with what was detected, the
+all-screens preview and the apply plan — in [docs/mockups/](docs/mockups/).*
+
 ---
 
 ## Contents
@@ -291,7 +296,7 @@ lin-wallpapers/
 | --- | --- |
 | [TECHNICAL-CONCEPT.md](TECHNICAL-CONCEPT.md) | Architecture, the five surfaces, scanning, scoring, catalogue schema, previews, transforms, the apply transaction, the helper and its security model, UI concept, design tokens, modularity, GTK 4 rules, packaging, testing, roadmap, risks |
 | [reference/README.md](reference/README.md) | The base script: what each step does and which module it becomes; the rules the app inherits from it |
-| [docs/mockups/](docs/mockups/) | UI mockups of the main screens |
+| [docs/mockups/](docs/mockups/) | UI mockups of the main screens, with rendered screenshots in `docs/mockups/png/` and the renderer that produces them |
 
 ## 15. License and credits
 

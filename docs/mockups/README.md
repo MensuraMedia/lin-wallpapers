@@ -14,6 +14,28 @@ surfaces, one yellow accent #FFC700). Values are illustrative but taken from the
 | `Apply.dc.html` | **Apply**: the plan sheet (11 steps, straight from the base script), the verified result with per-surface outcomes and the backup path, and apply history including a rolled-back attempt | Links |
 | `Sidebar.dc.html` | Shared sidebar component (`active` tweak) — logo, routes, "this machine" footer | Yes |
 
+## Screenshots
+
+`png/` holds a render of each artboard, produced by `render.py` (headless Firefox) so they can be
+regenerated whenever an artboard changes:
+
+```bash
+./docs/mockups/render.py           # all artboards -> docs/mockups/png/
+./docs/mockups/render.py Screens   # just one
+```
+
+| | |
+| --- | --- |
+| **Browse** | ![Browse](png/Main.png) |
+| **Image detail** | ![Image detail](png/Image.png) |
+| **Screens** | ![Screens](png/Screens.png) |
+| **Preview** | ![Preview](png/Preview.png) |
+| **Apply** | ![Apply](png/Apply.png) |
+
+The renderer resolves what the canvas runtime would do — `{{holes}}` from `renderVals()`, the
+`<dc-import>` sidebar, and the `<helmet>` styles — and drops the webfont link, so the screenshots use the
+Ubuntu/Cantarell fallback rather than Manrope.
+
 - **Format:** Design Component HTML (`.dc.html`) with an index in `canvas.json`; viewable on the project's
   private design canvas. Visual reference for M0–M5, not production code (the app is GTK + Cairo).
 - **Fonts:** Manrope, with inline stroke icons standing in for the planned symbolic set.
