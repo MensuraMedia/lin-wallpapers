@@ -13,7 +13,7 @@ happens.
 | **M3** | **Previews** | Shows the result before it happens: transform pipeline, Cairo compositor for all five screens, capability probes. Specified below. |
 | **M4** | **Apply (user space)** | The transaction engine, proven where no root is needed: desktop + lock on five desktops, with undo. Specified below. |
 | **M5** | **Apply (privileged)** | The base script, end to end, through a one-shot helper: login screen, boot splash, boot menu. Specified below. |
-| M6 | Breadth + release | GDM/SDDM providers, dracut back end, five distribution fake roots, sync mode, collections, `.deb`, first release |
+| **M6** | **Breadth, explanation, release** | Works and explains itself everywhere: more providers, capability states and the activity log, sync mode, packaging, v1.0. Specified below. |
 | M7 | More surfaces | LXQt/Pantheon/Budgie, per-monitor and Wayland refinements, online scan sources |
 | M8 | GTK 4 | Flip `gtk_version.py`, `Gtk.GridView` grid, drop the compatibility shims |
 
@@ -24,6 +24,11 @@ happens.
   OS configuration and exits. Sync mode (M6) is opt-in, off by default, and a user-session autostart entry.
 - Providers, not conditionals: no code branches on a distribution name outside `detect()`.
 - Services never import GTK; widgets never touch the filesystem; the CLI can do whatever the GUI can.
+- **Never hide a feature.** What this machine cannot do stays in the interface, greyed out, labelled
+  "Unsupported in {distribution} {version}" with a plain-language reason, a "Why?" popover carrying the
+  reason code and evidence, and a matching line in the activity log
+  ([TECHNICAL-CONCEPT.md §15.1–15.3](../TECHNICAL-CONCEPT.md)). Every milestone that adds a feature adds its
+  reason codes and its greyed-out state in the same commit.
 - Every privileged step is planned before it is performed, backed up before it is written, verified before
   it is committed, and reversible afterwards.
 
@@ -961,5 +966,174 @@ same helper operations — no new mechanism, no new privilege.
 
 ## After M5
 
-M6 widens the same machinery: GDM and SDDM, the dracut back end, the remaining distribution fake roots, then
-sync mode, collections and slideshows, `.deb` packaging with AppStream metadata, and the first release.
+M6 widens the same machinery and makes the app explain itself — specified below.
+
+---
+
+# M6 — Breadth, explanation and release
+
+**Goal:** the same build behaves well on any Debian-based system — doing what that system supports, saying
+clearly what it does not, and logging why — then ships as a `.deb`.
+
+**Demo at the end of M6:** the same package installed on Mint Cinnamon, Ubuntu GNOME, Debian Xfce, Kubuntu
+and MX. On each, the screens it can change are live; the ones it cannot are **greyed out, still visible**,
+labelled *"Unsupported in Debian 12 — Plymouth isn't installed on this system"*, with a **Why?** popover
+showing the evidence and a Diagnostics view that logs every one of those decisions. Sync mode can be turned
+on, and turned back off, leaving nothing behind.
+
+### In scope
+The capability-state framework and reason-code catalogue, the activity log and Diagnostics page, GDM and
+SDDM providers, the dracut initramfs back end, fake roots for five distribution shapes, sync mode,
+collections and slideshows, `.deb` packaging with AppStream metadata, and the v1.0 release process.
+
+### Not in scope
+LXQt/Pantheon/Budgie desktops, per-monitor and Wayland refinements, and online scan sources — M7.
+
+---
+
+## M6.1 — Capability states and reason codes
+
+- [ ] `src/capability/states.py` — the five states from [§15.1](../TECHNICAL-CONCEPT.md): `available`,
+      `needs_authorization`, `degraded`, `unsupported`, `blocked`; every feature in the app resolves to one
+- [ ] `src/capability/reasons.py` — the §15.2 catalogue: code → state, message template, expected evidence
+      keys, optional remedy. Adding a reason means adding a catalogue entry, never a new string in a widget
+- [ ] `src/capability/messages.py` — renders a code plus evidence into the headline
+      *"Unsupported in {distribution} {version}"* (from `/etc/os-release`, with the pretty name) and the
+      plain-language line beneath it
+- [ ] A **feature registry**: not only the five surfaces but per-monitor wallpapers, slideshows, the live
+      splash check, sync mode, each image format, and the boot-menu surface — every one resolvable and
+      explainable, whether or not a provider exists for it here
+- [ ] Providers return `(state, code, evidence, remedy?)`; returning prose, `False` or an exception-as-answer
+      fails review and the contract tests
+- [ ] Re-resolution on change: a package installed, a drive connected, a display added or `/boot` remounted
+      flips a feature's state while the app is open, and the change is announced in place (no restart)
+
+## M6.2 — The greyed-out treatment
+
+- [ ] One component (`ui/components/capability_control.py`) wraps any control with its state: greyed but
+      focusable and screen-reader readable, with the state's mark (shield for authorization, warning for
+      degraded, muted for unsupported/blocked)
+- [ ] Nothing is removed, ever: an unsupported surface keeps its card, its preview and its place on the
+      Screens page, and says what it is missing
+- [ ] **Why?** popover: headline, plain reason, the evidence list ("`/usr/sbin/plymouthd` not found";
+      "`default.plymouth` alternative missing"), the remedy as text, **Copy diagnostics**, and **Open the log
+      here** — which opens Diagnostics filtered to those lines
+- [ ] Blocked ≠ unsupported: "temporarily unavailable" states say what to change and re-check themselves
+- [ ] Applies never silently skip a surface: an unsupported target is reported in the plan as "will be
+      skipped — {reason}", before the user presses Apply
+
+## M6.3 — The activity log and Diagnostics
+
+- [ ] `util/log.py` — JSON Lines to `~/.local/state/lin-wallpapers/log/`, one file per session, rotation at
+      10 files / 20 MB, areas (`probe`, `scan`, `analyse`, `preview`, `apply`, `helper`, `capability`)
+- [ ] Every probe verdict, scan summary, skipped path with its reason, plan, step outcome, authorization
+      result, verification, rollback and capability state change is logged — the log is the app's account of
+      itself, not a debug afterthought
+- [ ] The helper's structured progress lines are captured into the same log and also land in the journal
+- [ ] `pages/page_diagnostics.py` — the capability table (feature, state, reason, evidence) over the log
+      viewer, with filters by area, level and session, and a search box
+- [ ] **Copy diagnostics** bundles `linwp doctor --json`, the recent log and the distribution details; the
+      same bundle seeds a test fake root
+- [ ] No telemetry, no network calls — asserted by a test that fails on any outbound socket
+
+## M6.4 — More providers
+
+- [ ] `greeter_gdm` — the documented, reversible GResource/dconf path where it works; where it does not
+      (Wayland-only or a locked-down configuration), the surface reports `OWNED_BY_OTHER` or
+      `SESSION_UNSUPPORTED` and stays greyed out with the explanation
+- [ ] `greeter_sddm` — `/etc/sddm.conf.d/` drop-in pointing the active theme's `background=` at the installed
+      image; theme detection included, with `degraded` when the theme ignores the key
+- [ ] `InitramfsBackend: dracut` — `dracut --regenerate-all --force`, with the same "theme present in every
+      image" verification as initramfs-tools
+- [ ] `bootmenu_none` — systemd-boot or no boot manager detected: the surface stays visible and greyed with
+      the reason
+- [ ] Every new provider ships: detection evidence, capabilities, plan/apply/verify/revert, a preview spec,
+      reason codes, a fake-root golden test, and its row in the §4.2 matrix (the universality checklist)
+
+## M6.5 — Distribution shapes and CI
+
+- [ ] `tests/fakeroot/` completed for five shapes: Mint Cinnamon, Ubuntu GNOME, Debian Xfce, Kubuntu, MX
+- [ ] **Capability matrix tests:** for each shape, and for deliberately broken variants (Plymouth absent, no
+      GRUB, `/boot` read-only, no polkit agent, unknown greeter), assert the resolved state, the reason code
+      and the rendered message for every feature
+- [ ] Container runs in CI for the shapes that can run headless; the rest covered by the release checklist
+- [ ] A "cold system" test: no catalogue, no settings, no network — first run still explains itself
+
+## M6.6 — Sync mode
+
+- [ ] `sync/agent.py` — watches the desktop wallpaper setting, debounces 10 s, checks the file is stable and
+      suitable, then re-applies the enabled surfaces
+- [ ] **Opt-in and off by default**, as a user-session autostart entry
+      (`~/.config/autostart/lin-wallpapers-sync.desktop`) — not a system service, nothing enabled at install
+- [ ] The authorization trade-off is stated before enabling: authorize each sync, or install a polkit rule
+      for `apply.*` limited to the active local session. The rule is **shown in full** first, written by the
+      helper, and removed when sync is switched off
+- [ ] Turning sync off changes no screen; a test asserts the autostart file and any rule are gone afterwards
+- [ ] Minimum interval so a fast slideshow never rebuilds the initramfs repeatedly; below it, only the
+      user-space surfaces follow, and the UI says so
+
+## M6.7 — Collections and slideshows
+
+- [ ] Manual collections and smart collections (saved filter queries) on the Collections page
+- [ ] A collection can be a desktop slideshow source where the desktop supports it; where it does not, the
+      control is greyed with `PER_MONITOR_UNSUPPORTED`-style reasoning for slideshows
+- [ ] Slideshow interaction with sync mode made explicit in one sentence in the UI, not in a doc only
+
+## M6.8 — Packaging and release
+
+- [ ] Two `.deb`s via `debhelper` + `dh-python`: `lin-wallpapers` (GUI + CLI) and `lin-wallpapers-helper`
+      (helper + polkit actions). **`postinst` enables and starts nothing**
+- [ ] `.desktop`, AppStream metainfo with screenshots, symbolic icons, GResource bundle, man pages for
+      `lin-wallpapers` and `linwp`
+- [ ] `lintian`-clean; install / upgrade / remove / purge tested, with purge leaving no units, no autostart
+      entry and no root-owned leftovers outside `/var/backups` (which is kept deliberately, and documented)
+- [ ] `docs/release-checklist.md` executed: real reboot on the reference machine, plus a VM per shape,
+      covering apply, undo, log out and reboot
+- [ ] Version, tag, `changelog.md`, release notes, and the README status line moved from "design phase" to
+      shipped
+
+## M6.9 — Tests
+
+- [ ] Capability rendering tests: every code in the catalogue renders a complete sentence with real evidence
+      (no `{placeholder}` left unfilled) — a table-driven test over the whole catalogue
+- [ ] A "missing component" suite: remove Plymouth / GRUB / the greeter from a fake root and assert the app
+      still starts, still browses, still applies what it can, and greys the rest with the right message
+- [ ] Log assertions: a greyed control's "Why?" lines exist in the log with matching code and evidence
+- [ ] Sync tests: enable → change wallpaper → surfaces follow; disable → nothing left behind
+- [ ] Packaging tests in a container: install, run `--version`, purge, assert cleanliness
+
+---
+
+## M6 acceptance criteria
+
+1. On a system without Plymouth, the boot splash stays visible, greyed, headed *"Unsupported in {distro}"*,
+   with a plain reason, evidence, a remedy and a matching log entry — and the rest of the app works normally.
+2. Every reason code in the catalogue renders a complete, plain-language sentence from real evidence.
+3. Installing the missing component while the app is open flips the feature to available in place.
+4. No feature is ever hidden or removed; a table-driven test enumerates the feature registry and asserts each
+   is present in the UI in one of the five states.
+5. The Diagnostics page explains every greyed control, and "Why?" jumps to the exact lines.
+6. GDM, SDDM and dracut providers pass their fake-root tests; unsupported paths report codes rather than fail.
+7. The capability matrix passes for all five distribution shapes and the broken variants.
+8. Sync mode is off by default, enables with the trade-off stated, and removes its autostart entry and any
+   polkit rule when disabled.
+9. The packages install, upgrade, remove and purge cleanly, enable nothing, and are `lintian`-clean.
+10. No telemetry and no outbound network connection, asserted by test.
+
+## M6 risks
+
+| Risk | Mitigation |
+| --- | --- |
+| Greyed-out controls become a graveyard of dead UI | States are specific ("Plymouth isn't installed", not "unavailable"), remedies are named, and blocked states re-check themselves |
+| Reason messages drift into developer language | One catalogue, table-driven rendering tests, and plain-language review as part of the checklist |
+| GDM's override is fragile across `gnome-shell` upgrades | Treated as `degraded` by default, documented as reversible, re-verified after upgrades, and reported honestly rather than silently failing |
+| The log grows or leaks | Rotation, session files, `$HOME`-only paths, no network, purge documented |
+| Sync mode's polkit rule becomes a permanent hole | Shown in full before writing, scoped to the active local session and the `apply.*` actions, removed when sync is disabled, and asserted by test |
+| Packaging enables something by accident | `postinst` asserted to enable nothing; purge test checks units, autostart and leftovers |
+| "Breadth" turns into an endless provider list | M6 ships exactly the providers listed here; anything else is M7 |
+
+## After M6
+
+M7 widens reach again — LXQt, Pantheon and Budgie, per-monitor and Wayland refinements, online scan sources —
+each arriving as a provider with its own reason codes, greyed-out state and fake-root test, changing nothing
+in the core.

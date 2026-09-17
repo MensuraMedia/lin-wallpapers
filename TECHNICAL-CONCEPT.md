@@ -61,6 +61,7 @@ Lin Wallpapers:
 | **Explain the machine** | Where a surface can't be changed (GDM under Wayland, a locked-down greeter, no `/boot` write access), the app says which component owns it and what the alternative is. |
 | **Fast on 50,000 images** | Scanning, hashing and thumbnailing happen in worker threads with a bounded queue; the browser is virtualized; the UI never blocks. |
 | **Modular and universal** (binding, per the universal instruction set) | Desktops, greeters, splash systems, boot managers, scan sources and imaging backends are *providers* behind stable interfaces (§17). Adding Xfce, SDDM or dracut is a new module, not a change to the core; no module may branch on a distribution name. |
+| **Never hide a feature** | What this machine can't do is greyed out, labelled "Unsupported in {distribution}", and explains itself from a reason code with evidence — never removed, never a bare error (§15.1–15.3). |
 | **Calm, premium UI** | Dark navy-gray surfaces, one yellow accent, images carry the color; the chrome never competes with the wallpaper (§16). |
 
 ---
@@ -445,7 +446,8 @@ lin-wallpapers/
 │   ├── config/                  # config_theme.py · config_layout.py · config_themes.py · config_paths.py
 │   ├── ui/                      # dashboard_window.py · sidebar.py · content_area.py · compat.py
 │   │   └── components/          # image_card · filter_bar · preview_pane · surface_tile · crop_handle · apply_sheet
-│   ├── pages/                   # page_base.py · page_browse · page_image · page_screens · page_apply
+│   ├── capability/              # states.py · reasons.py (the §15.2 catalogue) · messages.py
+│   ├── pages/                   # page_base.py · page_browse · page_image · page_screens · page_apply · page_diagnostics
 │   │                            # page_sources · page_collections · page_history · page_settings · page_about
 │   ├── viewmodels/              # browse_vm · image_vm · screens_vm · apply_vm (no GTK imports below this line)
 │   ├── scanner/                 # roots.py · walker.py · probe.py · score.py · hash.py · watch.py
@@ -486,6 +488,7 @@ buttons and a scan-status footer; content area on the right.
 | **Collections** | Manual collections and smart collections (saved filters) | New, rename, reorder, set as slideshow source |
 | **History** | Apply events: time, image thumbnail, surfaces, result, backup reference | Undo, re-apply, open backup manifest |
 | **Settings** | Scan policy, thumbnail cache size, default fit mode, sync behavior, polkit rule state, GRUB/Plymouth options, logging | Clear cache, rebuild catalogue, export/import settings |
+| **Diagnostics** (from Settings, and from every "Why?" popover) | The activity log (§15.3) filtered by area, level and session; the capability table with each feature's state, reason code and evidence; the machine model | Filter, jump to the lines explaining a greyed-out control, Copy diagnostics bundle |
 
 **Apply sheet** (the confirmation): the chosen image, the surfaces, the exact step list from the plan,
 estimated duration, the warning that the boot splash triggers an initramfs rebuild, and a single
@@ -508,6 +511,75 @@ honored, no color-only status (icon + text always).
 | Unsupported surface | Tile in a muted state with the owning component named and a "Why?" popover |
 | Authorization refused | Non-destructive: the plan stops, nothing is half-applied, the sheet offers Retry |
 | Apply failed mid-way | Automatic rollback already done; the sheet shows which step failed, the log excerpt and the backup path |
+
+### 15.1 Capability states: nothing is ever removed, only greyed out
+
+The same binary ships everywhere, so on any given machine some features have nothing to drive them. **A
+feature this system cannot do is never hidden and never removed from the interface.** It stays in place,
+greyed out, labelled with the system it is unsupported on, and able to explain itself.
+
+Every feature — each of the five surfaces, per-monitor wallpapers, slideshows, the live splash check, sync
+mode, a format the platform has no loader for — resolves to exactly one of five states:
+
+| State | Control | Label | Example |
+| --- | --- | --- | --- |
+| **Available** | Live | — | Desktop on Cinnamon |
+| **Needs authorization** | Live, with a shield mark | "Asks for your password" | Boot splash with a polkit agent present |
+| **Degraded** | Live, with a warning mark | "Partly supported: …" | A greeter whose config parses but whose binary is unknown |
+| **Unsupported** | **Greyed out, still visible** | **"Unsupported in Linux Mint 22.2"** + a one-line reason | Boot splash where Plymouth is not installed |
+| **Blocked** | Greyed out | "Temporarily unavailable: …" | `/boot` read-only, `dpkg` lock held, drive offline |
+
+The label rule: *"Unsupported in {distribution} {version}"* as the headline, a plain-language reason under
+it, and a **"Why?"** popover carrying the reason code, the evidence the probe collected, what would have to
+change, and a **Copy diagnostics** button. Nothing says "error" when the honest answer is "this system
+doesn't have that component".
+
+### 15.2 Reason codes
+
+Providers never return prose. `detect()`, `capabilities()` and every precheck return a **reason code** plus
+evidence; one catalogue turns codes into sentences, so the GUI, the CLI, the log and the bug report all say
+the same thing, and a new provider cannot invent a new way of saying "no".
+
+| Code | Headline | Plain-language message (filled from evidence) |
+| --- | --- | --- |
+| `COMPONENT_MISSING` | Unsupported in {os} | "{Component} isn't installed on this system, so the {surface} can't be changed. Installing `{package}` would enable it." |
+| `COMPONENT_NOT_DETECTED` | Unsupported in {os} | "No supported {kind} was found. Detected instead: {evidence}." |
+| `OWNED_BY_OTHER` | Unsupported in {os} | "{Owner} manages the {surface} here, and it doesn't allow an image to be set this way." |
+| `SESSION_UNSUPPORTED` | Unsupported in this session | "This works on X11; the current session is {session}." |
+| `VERSION_TOO_OLD` | Unsupported in {os} | "{Component} {found} is older than {required}." |
+| `NO_POLKIT_AGENT` | Temporarily unavailable | "Nothing is running to ask for your password, so system changes can't be authorized." |
+| `NOT_WRITABLE` | Temporarily unavailable | "{Path} is read-only right now." |
+| `INSUFFICIENT_SPACE` | Temporarily unavailable | "{Path} has {free} free; this needs about {needed}." |
+| `PACKAGE_MANAGER_BUSY` | Temporarily unavailable | "A package operation is running; changing boot files now isn't safe." |
+| `VOLUME_OFFLINE` | Temporarily unavailable | "The drive {label} holding this image isn't connected." |
+| `LOADER_MISSING` | Partly supported | "This system has no loader for {format}; those images are listed but can't be used." |
+| `PER_MONITOR_UNSUPPORTED` | Partly supported | "{Desktop} sets one wallpaper for all monitors." |
+| `PROVIDER_ERROR` | Something went wrong | "{Component} failed unexpectedly: {summary}. The rest of the app is unaffected." |
+
+Each entry carries the code, the state it maps to, the message template, the evidence keys it expects, and
+an optional **remedy** (a package to install, a setting to change, a drive to reconnect) — shown as text,
+never as something the app does on the user's behalf.
+
+### 15.3 The activity log
+
+The app keeps its own log, so "why can't I do this?" always has an answer without the user learning
+`journalctl`.
+
+- **Where:** `~/.local/state/lin-wallpapers/log/` — JSON Lines, one file per session, rotated (10 files or
+  20 MB), with a human-readable view inside the app (Settings → Diagnostics).
+- **What is logged:** every probe result with its evidence and reason code; scan summaries (roots, counts,
+  skipped with reasons); every plan, every step with its outcome and duration; authorization outcomes;
+  verification results; rollbacks; and every capability state change ("Boot splash: unsupported → available,
+  Plymouth was installed").
+- **Levels and filters:** filter by area (probe, scan, analyse, preview, apply, helper) and level; defaults
+  to the current session. Clicking **"Why?"** on a greyed-out control opens the log filtered to exactly the
+  lines that explain it.
+- **Diagnostics bundle:** one button copies or saves `linwp doctor --json` plus the recent log and the
+  distribution details — the bug-report format, and the same JSON that seeds a new test fake root.
+- **Privacy:** paths under `$HOME` are included because they matter for diagnosis; nothing is ever sent
+  anywhere. No telemetry and no network calls, in any milestone.
+- **The helper logs too:** its structured progress lines are captured into the same log and also land in the
+  journal, so a privileged failure stays diagnosable afterwards.
 
 ---
 
@@ -566,6 +638,8 @@ Rules every provider obeys:
 1. **No GTK, no UI, no user interaction.** Providers are libraries; the GUI and the CLI both drive them.
 2. **Detection is evidence-based** — a binary on `PATH`, a running process, a D-Bus name, a schema in the
    GSettings database, a config file that parses — and returns *why*, so the UI can explain itself.
+   A negative result is a **reason code plus evidence** from the §15.2 catalogue, never prose and never a
+   bare `False`; the control it belongs to is greyed out, not removed.
 3. **Declared capabilities, no surprises.** The planner refuses to build a step a provider hasn't declared.
 4. **Plan before act.** `plan()` is pure and side-effect free; `apply()` executes only what `plan()` returned.
 5. **Reverse with the forward.** A step that cannot describe its own undo cannot be planned.

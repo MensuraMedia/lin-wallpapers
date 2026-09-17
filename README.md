@@ -80,6 +80,7 @@ undo — and providers that make the same steps work beyond Mint.
 | **Apply** | To one screen or to all five. You see the exact step list first. Every apply backs up what was there, verifies the result (including that the theme really is inside the new initramfs) and rolls back on failure. |
 | **Undo** | Full history of applies with thumbnails and results; undo restores every file and setting from the backup manifest. |
 | **Sync** | Optional and off by default: keep all screens matching the desktop wallpaper automatically. It is the only part that keeps running — a session autostart entry, not a service — and switching it off leaves every screen as it is. |
+| **Explain** | Whatever your system can't do stays in the app, greyed out and labelled *"Unsupported in {your distribution}"*, with a plain reason, the evidence behind it and what would change it. An activity log records every such decision, and one button copies a diagnostics bundle. |
 | **Script** | The `linwp` CLI does everything the GUI does, for automation and headless use. |
 
 ## 3. The five screens
