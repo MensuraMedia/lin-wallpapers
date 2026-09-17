@@ -10,7 +10,7 @@ happens.
 | **M0** | **Foundation** | The app opens, navigates and is themed; no features yet. Specified below. |
 | **M1** | **Catalogue** | Finds the images and shows them: scanner, SQLite catalogue, thumbnails, Sources and Browse. Specified below. |
 | **M2** | **Judgement** | Decides which images actually work as wallpapers: scoring, badges, duplicates, Image page. Specified below. |
-| M3 | Previews | Transform pipeline, Cairo preview compositor, Screens page with capability probes |
+| **M3** | **Previews** | Shows the result before it happens: transform pipeline, Cairo compositor for all five screens, capability probes. Specified below. |
 | M4 | Apply (user space) | Planner, backups, verification, rollback, History/undo; desktop + lock on Cinnamon, GNOME, MATE, Xfce, Plasma |
 | M5 | Apply (privileged) | One-shot `pkexec` helper + polkit actions; login screen, boot splash, boot menu — the base script, end to end; `linwp` CLI and `doctor` |
 | M6 | Breadth + release | GDM/SDDM providers, dracut back end, five distribution fake roots, sync mode, collections, `.deb`, first release |
@@ -459,5 +459,160 @@ Learning from what the user actually applies, ML aesthetic scoring, and per-surf
 
 ## After M2
 
-M3 makes the result visible: the transform pipeline (fill/fit/center/stretch with a focal point), the Cairo
-preview compositor for all five screens, and the Screens page driven by real capability probes.
+M3 makes the result visible — specified below.
+
+---
+
+# M3 — Previews
+
+**Goal:** see it before it happens. Four of the five screens are otherwise only visible by logging out or
+rebooting, so M3 builds the transform that will be installed and renders every screen from *that same
+transform* — plus the capability probes that say what this machine can actually do.
+
+**Demo at the end of M3:** pick an image, drag the crop to taste, and see the desktop, lock screen, login
+screen, boot splash and boot menu side by side with that exact crop; the Screens page says what was detected
+on this machine — "slick-greeter", "Plymouth with initramfs-tools", "GRUB 2 at /boot/grub/grub.cfg" — and
+explains anything it cannot do. Nothing has been applied, and nothing outside `$HOME` has been written.
+
+### In scope
+The transform pipeline and its format profiles, the fit/focal-point control, the read-only capability probes
+and each provider's `detect()` / `capabilities()` / `current()`, the Cairo preview compositor for all five
+surfaces, the Screens page, the Preview page, and `linwp preview`.
+
+### Not in scope
+Any write outside `$HOME`: no greeter config, no theme installation, no initramfs, no GRUB. The helper, the
+apply planner, backups and undo are M4/M5. "Run the real splash" needs root and arrives with M5. Apply
+buttons exist on the Screens page but are disabled, with a tooltip naming the milestone.
+
+---
+
+## M3.1 — The transform pipeline
+
+- [ ] `imaging/transform.py` — one entry point, `transform(image, geometry, mode, profile) -> bytes`, used by
+      **both** previews and (from M4) applies. This is the base script's `render()` generalised
+      ([reference/README.md](../reference/README.md), step 2)
+- [ ] Modes: `fill` (zoom + centre crop, the default and what the base script does), `fit` (letterbox with a
+      palette-derived matte from M2's palette), `center`, `stretch`, `tile`
+- [ ] Order of operations fixed and documented: EXIF orientation → ICC to sRGB → scale (Lanczos) → crop at the
+      focal point → flatten alpha → encode
+- [ ] Focal point: normalised `(fx, fy)` biasing the crop, defaulting to centre; stored per image
+- [ ] Format profiles: original file (desktop), JPEG q92 stripped of metadata (greeter), PNG without alpha
+      (splash), 8-bit PNG ≤ 256 colours (boot menu), JPEG q85 (thumbnails)
+- [ ] **Deterministic:** same input + options → byte-identical output (property test), so "is the installed
+      file still the one I chose?" is a hash comparison in M4
+- [ ] Render cache keyed by `(image content hash, geometry, mode, focal point, profile)` so dragging the crop
+      re-renders at preview size only, and the apply reuses what the preview already produced
+- [ ] Decode budget and downscale-on-load (`GdkPixbuf` scaling loader) so a 40 megapixel source is cheap
+
+## M3.2 — Capability probes (read-only)
+
+- [ ] `apply/environment.py` — the machine model: session type, desktop, greeter, splash system, initramfs
+      generator, boot manager, outputs, writability of `/boot` and `/usr/share`, polkit agent present
+- [ ] `detect()` for every v1 provider in the §4.2 matrix: `desktop_{cinnamon,gnome,mate,xfce,plasma}`,
+      `lock_*`, `greeter_{slick,lightdm_gtk,gdm,sddm,lightdm_generic}`, `splash_plymouth`,
+      `bootmenu_{grub,none}` — each returning confidence **and evidence strings**
+- [ ] `capabilities()` and `current()` per provider — what it can do, and what is set right now (the greeter's
+      configured background, the resolved `default.plymouth`, `GRUB_BACKGROUND`, the desktop's `picture-uri`)
+- [ ] Everything here is **read-only**: no provider may write in M3, and a test asserts it (see M3.7)
+- [ ] Results cached for the session with an explicit "Re-probe" action; a display change invalidates geometry
+- [ ] `linwp doctor` prints the machine model and every provider's verdict (`--json`); the apply-side parts of
+      doctor land in M5
+
+## M3.3 — The preview compositor
+
+- [ ] `preview/compositor.py` — renders a surface preview from the transform output plus a `PreviewSpec`
+      supplied by the provider, so a new provider brings its own chrome instead of patching the compositor
+- [ ] `preview/surfaces/desktop.py` — panel, a few desktop icons, a window frame, clock; panel position and
+      icon size taken from the desktop's own settings where readable
+- [ ] `preview/surfaces/lock.py` — clock, date and unlock field at the detected desktop's real positions
+- [ ] `preview/surfaces/login.py` — the greeter's layout: avatar, user name, password field, session and power
+      buttons, top bar; slick-greeter and lightdm-gtk-greeter differ and each provider says so
+- [ ] `preview/surfaces/splash.py` — **pixel-exact geometry**: the same cover-scaling maths and spinner
+      placement (75 % of screen height) as the theme the app will generate, animated at the theme's frame rate
+- [ ] `preview/surfaces/bootmenu.py` — the quantized 8-bit PNG with the menu box, entry list and GRUB's font
+      metrics over it, so colour banding is visible *before* it is installed
+- [ ] All chrome drawn with Cairo through `ui/compat.py`'s canvas wrapper (GTK 4 ready); `prefers-reduced-motion`
+      honoured; every preview renders in < 120 ms at card size
+- [ ] One code path for card-size and full-size previews — no separate "big preview" renderer
+
+## M3.4 — Fit control and focal point
+
+- [ ] Image page gains the crop frame over the preview, the fit-mode segmented control, and drag-to-reposition
+      (a `Gtk.GestureDrag` through `compat`)
+- [ ] Live re-render while dragging, debounced to one frame, using the preview-size render cache
+- [ ] Per-image options persisted in the catalogue (`fit_mode`, `focal_x`, `focal_y`), defaulting to
+      `fill` + centre; "Reset crop" restores them
+- [ ] The crop shown is the crop that will be installed — the same call, the same options, verified by a test
+      that compares the preview's transform hash with the one a (dry-run) apply plan would use
+
+## M3.5 — Screens page
+
+- [ ] The five surface cards, each with: a live mini preview, the provider name and mechanism, the probe
+      verdict (`applied` / `follows desktop` / `needs authorization` / `unavailable: <reason>`), what is
+      currently set, and the owning component when unsupported
+- [ ] "Preview" opens the full-size preview; "Apply" and "Revert" are visible but disabled with a tooltip
+      naming their milestone (M4 for desktop/lock, M5 for the three privileged screens)
+- [ ] The "what was detected" panel from the mockup, listing evidence per component, with "Copy doctor report"
+- [ ] The sync switch is rendered but disabled until M6, labelled as such
+- [ ] Preconditions that will matter later are already shown, because they are read-only: free space on
+      `/boot`, `/boot` writability, number of installed kernels, polkit agent present
+
+## M3.6 — Preview page
+
+- [ ] All five previews in one view at the mockup's layout, each labelled with when it would take effect
+- [ ] Click to enlarge a single screen; switch the source image without leaving the page
+- [ ] The explainer panel stating that previews are built from the same transform as the apply, with the
+      per-surface format profiles listed
+- [ ] `linwp preview <image> --surface splash --out /tmp/splash.png` renders the same composition headlessly
+
+## M3.7 — Tests
+
+- [ ] **Transform golden tests:** byte-identical output for each mode and profile against committed hashes
+      (small generated sources, not photographs), on the reference platform
+- [ ] **Read-only test:** the whole M3 surface (probes, previews, `linwp preview`) runs under a wrapper that
+      fails the test if any path outside `$HOME`/`XDG_*` is opened for writing
+- [ ] **Probe tests** against the `tests/fakeroot/<distro-shape>/` trees from M0/M1: Mint Cinnamon,
+      Ubuntu GNOME, Debian Xfce, Kubuntu, MX — each asserting the selected providers and the evidence
+- [ ] **Compositor tests:** structural (regions, positions, sizes from the `PreviewSpec`) plus a perceptual
+      hash against a stored reference render, tolerant of font differences
+- [ ] Performance: preview render < 120 ms, crop drag at 60 fps, first transform of a 4K source < 400 ms
+- [ ] `docs/perf.md` extended; `docs/preview-fidelity.md` records what each mock does and does not reproduce
+
+### Deferred out of M3 (on purpose)
+The live splash check (`plymouthd` + `plymouth --show-splash`) needs root and lands in M5 alongside the real
+apply; screenshot-based previews of the actual greeter stay a later idea (§17.2).
+
+---
+
+## M3 acceptance criteria
+
+1. Every preview is produced by the same `transform()` call the apply will use — proven by a hash comparison
+   test, not by inspection.
+2. All five previews render for the reference machine, and each states when it would take effect.
+3. The Screens page reports the real machine: provider names, mechanisms, current values and evidence; every
+   unsupported surface names the component that owns it and why.
+4. The same probes, run against each of the five fake-root distribution shapes, select the right providers.
+5. Fit mode and focal point persist per image, and the crop shown equals the crop that would be installed.
+6. Nothing outside `$HOME` is written during any M3 operation — enforced by the read-only test wrapper.
+7. Budgets: preview < 120 ms, crop drag 60 fps, `linwp preview` produces the same PNG as the GUI.
+8. The boot-menu preview shows the quantized image, so banding is visible before installation.
+9. Apply/Revert/sync controls are present but disabled, each naming its milestone — no dead buttons.
+10. Layering holds: `imaging`, `preview` and the probe code import no GTK; only the compositor's canvas
+    wrapper does, through `compat`.
+
+## M3 risks
+
+| Risk | Mitigation |
+| --- | --- |
+| A mock preview differs from the real screen and the user feels misled | Splash geometry is pixel-exact and shares the theme's maths; the others are labelled "layout mock"; `docs/preview-fidelity.md` states the limits; the real splash check arrives in M5 |
+| Font and theme differences make greeter/menu mocks drift | Structural tests with perceptual-hash tolerance, not pixel equality; chrome positions come from the provider's `PreviewSpec` |
+| GRUB quantization surprises after install | The boot-menu preview renders the actual 8-bit quantized PNG, not the source image |
+| Probes mis-detect an unusual setup (two greeters installed, GDM on Wayland) | Confidence + evidence, a visible "Re-probe", `linwp doctor --json` as the bug-report format, and `greeter_lightdm_generic` as the honest fallback |
+| Re-rendering on every drag frame stalls the UI | Preview-size renders through the cache, debounced to one frame, work off the UI thread |
+| A read-only milestone quietly gains a write | The read-only test wrapper fails the build if any write outside `$HOME` is attempted |
+
+## After M3
+
+M4 makes it real where it is safe to: the apply planner, backups, verification, rollback and History/undo,
+with the desktop and lock screen applied end to end on Cinnamon, GNOME, MATE, Xfce and Plasma — still with
+no root, still nothing enabled in the background.
