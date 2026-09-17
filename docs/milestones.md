@@ -9,7 +9,7 @@ happens.
 | --- | --- | --- |
 | **M0** | **Foundation** | The app opens, navigates and is themed; no features yet. Specified below. |
 | **M1** | **Catalogue** | Finds the images and shows them: scanner, SQLite catalogue, thumbnails, Sources and Browse. Specified below. |
-| M2 | Judgement | Suitability scoring, badges, duplicates, Image page |
+| **M2** | **Judgement** | Decides which images actually work as wallpapers: scoring, badges, duplicates, Image page. Specified below. |
 | M3 | Previews | Transform pipeline, Cairo preview compositor, Screens page with capability probes |
 | M4 | Apply (user space) | Planner, backups, verification, rollback, History/undo; desktop + lock on Cinnamon, GNOME, MATE, Xfce, Plasma |
 | M5 | Apply (privileged) | One-shot `pkexec` helper + polkit actions; login screen, boot splash, boot menu — the base script, end to end; `linwp` CLI and `doctor` |
@@ -310,5 +310,154 @@ rescans on demand only.
 
 ## After M1
 
-M2 turns the catalogue into judgement: the weighted suitability score (§6), badges that explain themselves,
-perceptual-hash duplicate clustering, and the Image page with metadata, palette and the fit control.
+M2 turns the catalogue into judgement — specified below.
+
+---
+
+# M2 — Judgement
+
+**Goal:** the catalogue stops being a file list and starts being an opinion. Every image gets a suitability
+score that can be read back as sentences, badges that explain themselves, a palette, and duplicate
+clustering — so "show me what actually works as a wallpaper on this machine" is one filter, not an afternoon
+of scrolling.
+
+**Demo at the end of M2:** Browse opens sorted by score; the top row is genuinely the right images for this
+laptop's 1920 × 1080 panel; `Text-safe` narrows to images with a calm area where the login prompt sits;
+`Hide duplicates` collapses three copies of the same photo into one card; opening an image shows *why* it
+scored 91, component by component.
+
+### In scope
+The per-image analysis pass (palette, luminance, contrast, detail distribution), the weighted scorer and its
+explanations, badges, perceptual-hash duplicate clustering, the score/badge/duplicate filters and the default
+sort, and the Image page with metadata, palette, badges and the score breakdown.
+
+### Not in scope
+The transform pipeline and the crop/fit control, the surface previews, and the surface tiles' real state —
+all M3. **Scope correction to the original roadmap:** the fit control belongs with the transform that
+implements it, so M2's Image page shows a plain scaled preview and M3 adds the crop frame, fit modes and
+focal point. Nothing is applied, and nothing is written outside `$HOME`.
+
+---
+
+## M2.1 — The analysis pass
+
+- [ ] `scanner/analyze.py` — one worker pass over a downscaled decode (long edge 256), so analysis costs one
+      decode per image and never touches full resolution twice
+- [ ] **Palette:** k-means (k = 5) in CIELAB on the downscale, stored with population shares; plus mean
+      luminance, contrast range (P5–P95) and a dark/light classification
+- [ ] **Detail distribution:** edge density per cell on a 6 × 4 grid (Sobel on the downscale), stored as a
+      compact array — the basis of "text-safe", and reusable later for focal-point suggestions
+- [ ] **Text-safe regions:** the cells that matter per surface (centre band for the lock clock, centre for the
+      greeter prompt, lower third for the splash spinner, centre box for the boot menu) evaluated for low
+      edge density *and* sufficient contrast against white text
+- [ ] **Perceptual hash:** 64-bit dHash on the 9 × 8 luma downscale, stored as an integer
+- [ ] Runs in the same bounded worker pool as M1, as a second pass so a scan still fills the grid quickly;
+      analysis results stream into the cards as they land
+- [ ] Incremental: only rows whose `mtime`/`size` changed, or whose `analysis_version` is older, are re-analyzed
+
+## M2.2 — The scorer
+
+- [ ] `scanner/score.py` — the weighted model from [TECHNICAL-CONCEPT.md §6](../TECHNICAL-CONCEPT.md):
+      resolution vs. the *actual* connected outputs (35), aspect match (20), detail distribution (15),
+      color coherence (10), format and integrity (10), not-a-wallpaper penalties (10)
+- [ ] **Display-aware:** outputs come from `Gdk.Monitor`; the machine's geometry is part of the score input,
+      and a display change (dock, external monitor, resolution change) invalidates and recomputes scores
+      in the background — with the old score shown until the new one lands, never a blank
+- [ ] **Deterministic and versioned:** `scorer_version` stored per row; bumping the version triggers a
+      recompute pass, and the same inputs always produce the same number (a property test asserts it)
+- [ ] **Explanations are data, not prose glued on afterwards:** each component returns
+      `(points, max, reason)`, so the UI, the CLI and the tooltips read the same structure
+- [ ] Penalties are explicit and listable: alpha channel, animation, icon/sprite geometry, upscale required,
+      EXIF rotation needed, path heuristics (`icons/`, `emoji/`, `textures/`, `sprites/`)
+- [ ] Score never hides anything: it orders the grid and feeds filters; only the filter bar removes rows
+
+## M2.3 — Badges
+
+- [ ] `4K`, `native`, `text-safe`, `dark`, `light`, `duplicate`, `upscaled`, `portrait`, `animated`,
+      `truncated` — each derived from stored analysis, never recomputed in the view
+- [ ] Every badge carries a one-sentence explanation shown on hover/focus ("Text-safe: the centre band has
+      low detail and enough contrast for white text")
+- [ ] Badges are typed (`BadgeKind` enum), rendered by one component, and available to the CLI as `--badge`
+
+## M2.4 — Duplicates
+
+- [ ] `catalogue/dupes.py` — clustering by Hamming distance (≤ 6 by default) with size/megapixel bucketing to
+      keep comparisons cheap; BK-tree or banded index rather than an O(n²) sweep
+- [ ] A cluster elects a **representative**: highest resolution, then largest file, then first seen; the rest
+      carry `duplicate_of`
+- [ ] Browse collapses a cluster into one card with a "3 copies" chip; the Image page lists every path with
+      its size and folder, and lets the user change which copy is the representative
+- [ ] Never deletes anything. "Show duplicates" and "Reveal in Files" only — the app is not a deduper
+- [ ] Re-encoded and resized copies are found (a 4K JPEG and its 1080p PNG re-save cluster together); visually
+      distinct images with similar histograms must not (asserted in tests)
+
+## M2.5 — Browse becomes opinionated
+
+- [ ] Default sort changes to **Score, descending**; the other sorts stay
+- [ ] The score ring on each card fills in (the slot reserved in M1), with the number and the accent arc
+- [ ] New filters: minimum score, `Text-safe`, `Dark`/`Light`, `Hide duplicates`, `Native or better`
+- [ ] "Suitable for every screen" becomes a real saved query: score ≥ 70, native or better, text-safe
+- [ ] The empty-result state names which chip excluded everything (an M1 promise, now with more chips to blame)
+- [ ] Analysis progress is its own quiet line in the scan banner ("1,240 analysed of 1,864"), cancellable,
+      and never blocks browsing
+
+## M2.6 — Image page
+
+- [ ] Large preview: the image scaled to fit, with true dimensions and format shown — no crop frame yet (M3)
+- [ ] Score card: the ring, the total, and the breakdown bars with the stored `reason` for each component
+- [ ] Metadata grid: resolution, aspect, megapixels, file size, format, alpha, EXIF orientation, ICC, path,
+      volume, first seen, last seen
+- [ ] Palette strip with copyable hex values; dark/light classification stated
+- [ ] Badge row with the explanations; duplicate list when the image belongs to a cluster
+- [ ] The five surface tiles are present but honest: "not yet — M3 previews, M4/M5 apply"
+- [ ] `linwp show <id|path>` prints the same score breakdown, badges and duplicate list, `--json` included
+
+## M2.7 — Calibration and tests
+
+- [ ] A labelled corpus (~60 images: real wallpapers, phone photos, screenshots, icons, textures, scans)
+      with expected badges and score bands, committed as metadata + generators rather than binaries
+- [ ] Property tests: determinism (same input → same score), monotonicity (a larger copy of the same image
+      never scores lower), and bounds (0 ≤ score ≤ 100, components never exceed their max)
+- [ ] Duplicate tests: re-encode, resize, crop-by-2 %, and a "similar but different" negative set
+- [ ] Display-change test: a fake monitor set at 1920 × 1080 vs 3840 × 2160 reorders the same catalogue as expected
+- [ ] Performance: analysis ≥ 25 images/s on the reference laptop (4 workers), and a full re-score of 20,000
+      rows (no re-decode, stored features only) in under 2 s
+- [ ] `docs/perf.md` extended with the analysis and re-score numbers
+
+### Deferred out of M2 (on purpose)
+Learning from what the user actually applies, ML aesthetic scoring, and per-surface *separate* scores. The
+`Scorer` interface (§17.2) is in place so either can arrive later without touching the catalogue.
+
+---
+
+## M2 acceptance criteria
+
+1. Every catalogued image has a score, badges and a palette, or a recorded reason why analysis failed.
+2. The score is explainable end to end: the UI tooltip, the Image page breakdown and `linwp show --json`
+   report the same components, points and reasons.
+3. Determinism and versioning hold: re-running analysis produces identical numbers; bumping `scorer_version`
+   triggers a background recompute without blocking the UI.
+4. Changing the display configuration re-scores in the background and reorders Browse accordingly.
+5. `Hide duplicates` collapses re-encoded and resized copies of the same photo; the negative set stays separate.
+6. "Suitable for every screen" returns a list a person would agree with on the reference machine — reviewed
+   by hand against the labelled corpus, with misses recorded in `docs/perf.md` rather than quietly tuned away.
+7. No image is ever hidden by scoring alone; only filters remove rows, and each is removable as a chip.
+8. M1's budgets still hold: scanning, scrolling and filtering are no slower with analysis running.
+9. Layering holds — no `gi` in `scanner`/`catalogue`, and the CLI reproduces every Browse query.
+10. Still nothing in the background, and nothing written outside `$HOME`, `~/.cache` and `~/.local/share`.
+
+## M2 risks
+
+| Risk | Mitigation |
+| --- | --- |
+| "Suitability" is subjective and the score feels wrong | Weights are published, every component explains itself, the labelled corpus is the check, and the score only *sorts* — it never hides |
+| Tuning becomes endless | One calibration pass against the corpus, recorded; further tuning needs a new `scorer_version` and a documented reason |
+| Analysis makes the first scan feel slow | Second pass, after the grid is already usable, cancellable, at lower priority |
+| dHash false positives collapse distinct images | Conservative threshold plus size bucketing, a negative test set, and collapsing is a filter the user can switch off |
+| Score churn confuses ("it was 91 yesterday") | Scores change only when the image, the scorer version or the displays change — and the Image page says which |
+| k-means on large images costs CPU | All analysis runs on the 256 px downscale, one decode per image |
+
+## After M2
+
+M3 makes the result visible: the transform pipeline (fill/fit/center/stretch with a focal point), the Cairo
+preview compositor for all five screens, and the Screens page driven by real capability probes.
