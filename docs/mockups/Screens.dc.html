@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #1E2233; font-family: Manrope, Ubuntu, Cantarell, sans-serif; color: #F2F3F7; }
+    a { color: #FFC700; } a:hover { color: #FFDA5E; }
+    button { font-family: inherit; cursor: pointer; }
+    code { font-family: "JetBrains Mono", "Ubuntu Mono", monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 800px; box-sizing: border-box; display: flex; background: #1E2233; overflow: hidden;">
+  <dc-import name="Sidebar" active="screens" hint-size="150px,800px"></dc-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-end; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">Screens</h1>
+        <span style="font-size: 12.5px; color: #9AA0B0;">Detected on this machine — Cinnamon 6.4 · slick-greeter · Plymouth (initramfs-tools) · GRUB 2</span>
+      </div>
+      <span style="flex-grow: 1;"></span>
+      <button type="button" style="height: 32px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Re-probe</button>
+      <a href="Apply.dc.html" style="display: flex; align-items: center; height: 32px; padding: 0 18px; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 12px; font-weight: 800; text-decoration: none;">Apply everywhere</a>
+    </div>
+
+    <!-- sync bar -->
+    <div style="display: flex; align-items: center; gap: 14px; height: 52px; padding: 0 16px; box-sizing: border-box; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,199,0,0.22);">
+      <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="#FFC700" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8"/><path d="M20 4v4h-4"/><path d="M20 12a8 8 0 0 1-13.7 5.6L4 16"/><path d="M4 20v-4h4"/></svg>
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <span style="font-size: 12.5px; font-weight: 700;">Keep every screen matching my desktop wallpaper</span>
+        <span style="font-size: 11px; color: #9AA0B0;">Re-applies the other four screens 10 s after the desktop changes · authorization: ask each time</span>
+      </div>
+      <span style="flex-grow: 1;"></span>
+      <span style="font-size: 11.5px; font-weight: 700; color: #9AA0B0;">Off</span>
+      <button type="button" role="switch" aria-checked="false" aria-label="Sync all screens with the desktop wallpaper" style="width: 46px; height: 26px; padding: 0; border: 0; border-radius: 999px; background: rgba(255,255,255,0.14); display: flex; align-items: center; justify-content: flex-start;">
+        <span style="width: 20px; height: 20px; margin: 0 3px; border-radius: 999px; background: #C7CBD6;"></span>
+      </button>
+    </div>
+
+    <!-- screen cards -->
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+
+      <!-- desktop -->
+      <div style="display: flex; flex-direction: column; gap: 9px; padding: 12px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="position: relative; height: 112px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;"><circle cx="236" cy="54" r="17" fill="#FFE1A6" opacity="0.9"/><polygon points="0,116 66,64 118,98 176,50 244,104 320,74 320,180 0,180" fill="#2C3E63"/><polygon points="0,150 62,112 132,146 198,104 268,142 320,124 320,180 0,180" fill="#1B2440"/></svg>
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 15px; background: rgba(12,15,26,0.85); display: flex; align-items: center; gap: 4px; padding: 0 5px;">
+            <span style="width: 9px; height: 9px; border-radius: 2px; background: #FFC700;"></span>
+            <span style="width: 9px; height: 9px; border-radius: 2px; background: rgba(255,255,255,0.35);"></span>
+            <span style="width: 9px; height: 9px; border-radius: 2px; background: rgba(255,255,255,0.35);"></span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 800;">Desktop</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="padding: 3px 9px; border-radius: 999px; background: rgba(74,222,128,0.15); color: #4ADE80; font-size: 10px; font-weight: 800;">APPLIED</span>
+        </div>
+        <span style="font-size: 11px; color: #9AA0B0; line-height: 1.45;">Provider <code style="color: #C7CBD6;">desktop_cinnamon</code><br>org.cinnamon.desktop.background · picture-uri</span>
+        <span style="font-size: 11px; color: #C7CBD6;">mountain-distance-horizon.jpg · today 13:26</span>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" style="flex-grow: 1; height: 28px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 11.5px; font-weight: 700;">Preview</button>
+          <button type="button" style="flex-grow: 1; height: 28px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 11.5px; font-weight: 700;">Revert</button>
+        </div>
+      </div>
+
+      <!-- lock -->
+      <div style="display: flex; flex-direction: column; gap: 9px; padding: 12px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="position: relative; height: 112px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;"><polygon points="0,116 66,64 118,98 176,50 244,104 320,74 320,180 0,180" fill="#2C3E63"/><polygon points="0,150 62,112 132,146 198,104 268,142 320,124 320,180 0,180" fill="#1B2440"/></svg>
+          <div style="position: absolute; inset: 0; background: rgba(8,11,20,0.35); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;">
+            <span style="font-size: 22px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">21:14</span>
+            <span style="font-size: 9px; color: #E4E6EC;">Thursday, 17 September</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 800;">Lock screen</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="padding: 3px 9px; border-radius: 999px; background: rgba(74,222,128,0.15); color: #4ADE80; font-size: 10px; font-weight: 800;">FOLLOWS DESKTOP</span>
+        </div>
+        <span style="font-size: 11px; color: #9AA0B0; line-height: 1.45;">Provider <code style="color: #C7CBD6;">lock_cinnamon</code><br>cinnamon-screensaver draws the desktop background</span>
+        <span style="font-size: 11px; color: #C7CBD6;">Nothing to write — unless you want a different image</span>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" style="flex-grow: 1; height: 28px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 11.5px; font-weight: 700;">Preview</button>
+          <button type="button" style="flex-grow: 1; height: 28px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 11.5px; font-weight: 700;">Use another image</button>
+        </div>
+      </div>
+
+      <!-- login -->
+      <div style="display: flex; flex-direction: column; gap: 9px; padding: 12px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,199,0,0.3);">
+        <div style="position: relative; height: 112px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;"><polygon points="0,116 66,64 118,98 176,50 244,104 320,74 320,180 0,180" fill="#2C3E63"/><polygon points="0,150 62,112 132,146 198,104 268,142 320,124 320,180 0,180" fill="#1B2440"/></svg>
+          <div style="position: absolute; inset: 0; background: rgba(8,11,20,0.30); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+            <span style="width: 26px; height: 26px; border-radius: 999px; background: rgba(255,255,255,0.85);"></span>
+            <span style="font-size: 9.5px; font-weight: 700;">user</span>
+            <span style="width: 92px; height: 13px; border-radius: 999px; background: rgba(255,255,255,0.22);"></span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 800;">Login screen</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,199,0,0.16); color: #FFC700; font-size: 10px; font-weight: 800;">NEEDS AUTHORIZATION</span>
+        </div>
+        <span style="font-size: 11px; color: #9AA0B0; line-height: 1.45;">Provider <code style="color: #C7CBD6;">greeter_slick</code><br>/etc/lightdm/slick-greeter.conf · background=</span>
+        <span style="font-size: 11px; color: #C7CBD6;">Copies the image to /usr/share/backgrounds/lin-wallpapers</span>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" style="flex-grow: 1; height: 28px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 11.5px; font-weight: 700;">Preview</button>
+          <button type="button" style="flex-grow: 1; height: 28px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 11.5px; font-weight: 800;">Apply</button>
+        </div>
+      </div>
+
+      <!-- boot splash -->
+      <div style="display: flex; flex-direction: column; gap: 9px; padding: 12px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,199,0,0.3);">
+        <div style="position: relative; height: 112px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;"><polygon points="0,116 66,64 118,98 176,50 244,104 320,74 320,180 0,180" fill="#2C3E63"/><polygon points="0,150 62,112 132,146 198,104 268,142 320,124 320,180 0,180" fill="#1B2440"/></svg>
+          <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 40 40" width="34" height="34" fill="none"><circle cx="20" cy="20" r="14" stroke="rgba(255,255,255,0.28)" stroke-width="3"/><path d="M20 6a14 14 0 0 1 14 14" stroke="#FFC700" stroke-width="3" stroke-linecap="round"/></svg>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 800;">Boot splash</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,199,0,0.16); color: #FFC700; font-size: 10px; font-weight: 800;">NEEDS AUTHORIZATION</span>
+        </div>
+        <span style="font-size: 11px; color: #9AA0B0; line-height: 1.45;">Provider <code style="color: #C7CBD6;">splash_plymouth</code> · initramfs-tools<br>Generated theme + update-alternatives</span>
+        <span style="font-size: 11px; color: #FFB500;">Rebuilds the initramfs for 3 kernels (~20 s)</span>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" style="flex-grow: 1; height: 28px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 11.5px; font-weight: 700;">Preview</button>
+          <button type="button" style="flex-grow: 1; height: 28px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 11.5px; font-weight: 800;">Apply</button>
+        </div>
+      </div>
+
+      <!-- boot menu -->
+      <div style="display: flex; flex-direction: column; gap: 9px; padding: 12px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,199,0,0.3);">
+        <div style="position: relative; height: 112px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;"><polygon points="0,116 66,64 118,98 176,50 244,104 320,74 320,180 0,180" fill="#2C3E63"/><polygon points="0,150 62,112 132,146 198,104 268,142 320,124 320,180 0,180" fill="#1B2440"/></svg>
+          <div style="position: absolute; left: 14%; top: 18%; right: 14%; bottom: 18%; border: 1px solid rgba(255,255,255,0.35); background: rgba(8,11,20,0.62); padding: 6px 8px; display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 8px; font-weight: 700; color: #FFC700; background: rgba(255,199,0,0.18); padding: 1px 4px;">Linux Mint 22.2 Cinnamon</span>
+            <span style="font-size: 8px; color: #C7CBD6;">Advanced options</span>
+            <span style="font-size: 8px; color: #C7CBD6;">UEFI Firmware Settings</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 13px; font-weight: 800;">Boot menu</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,199,0,0.16); color: #FFC700; font-size: 10px; font-weight: 800;">NEEDS AUTHORIZATION</span>
+        </div>
+        <span style="font-size: 11px; color: #9AA0B0; line-height: 1.45;">Provider <code style="color: #C7CBD6;">bootmenu_grub</code><br>/etc/default/grub.d drop-in · update-grub</span>
+        <span style="font-size: 11px; color: #C7CBD6;">8-bit PNG at 1920 × 1080 · /boot has 412 MB free</span>
+        <div style="display: flex; gap: 6px;">
+          <button type="button" style="flex-grow: 1; height: 28px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 11.5px; font-weight: 700;">Preview</button>
+          <button type="button" style="flex-grow: 1; height: 28px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 11.5px; font-weight: 800;">Apply</button>
+        </div>
+      </div>
+
+      <!-- detection panel -->
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 14px; background: #2B3044; border: 1px solid rgba(255,255,255,0.07);">
+        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; color: #FFC700;">WHAT WAS DETECTED</span>
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+            <span style="font-size: 11px; color: #C7CBD6; line-height: 1.4;"><span style="color: #F2F3F7; font-weight: 700;">Cinnamon</span> — schema org.cinnamon.desktop.background present</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+            <span style="font-size: 11px; color: #C7CBD6; line-height: 1.4;"><span style="color: #F2F3F7; font-weight: 700;">slick-greeter</span> — /etc/lightdm/slick-greeter.conf parses; lightdm running</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+            <span style="font-size: 11px; color: #C7CBD6; line-height: 1.4;"><span style="color: #F2F3F7; font-weight: 700;">Plymouth</span> — default.plymouth → mint-logo; throbber frames reused</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+            <span style="font-size: 11px; color: #C7CBD6; line-height: 1.4;"><span style="color: #F2F3F7; font-weight: 700;">initramfs-tools</span> — owns /boot/initrd.img-* (dracut not present)</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+            <span style="font-size: 11px; color: #C7CBD6; line-height: 1.4;"><span style="color: #F2F3F7; font-weight: 700;">GRUB 2</span> — update-grub found; grub.cfg at /boot/grub/grub.cfg</span>
+          </div>
+          <div style="display: flex; gap: 8px; align-items: flex-start;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#9AA0B0" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="margin-top: 2px; flex-shrink: 0;"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16h.01"/></svg>
+            <span style="font-size: 11px; color: #9AA0B0; line-height: 1.4;">GDM, SDDM, Xfce, Plasma, MATE providers available — not installed here</span>
+          </div>
+        </div>
+        <span style="flex-grow: 1;"></span>
+        <button type="button" style="height: 28px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 11.5px; font-weight: 700;">Copy doctor report</button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

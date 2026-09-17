@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #1E2233; font-family: Manrope, Ubuntu, Cantarell, sans-serif; color: #F2F3F7; }
+    a { color: #FFC700; } a:hover { color: #FFDA5E; }
+    button { font-family: inherit; cursor: pointer; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 800px; box-sizing: border-box; display: flex; background: #1E2233; overflow: hidden;">
+  <dc-import name="Sidebar" active="image" hint-size="150px,800px"></dc-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <a href="Main.dc.html" style="display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700; color: #9AA0B0; text-decoration: none;">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m14 6-6 6 6 6"/></svg>
+        Browse
+      </a>
+      <div style="display: flex; flex-direction: column; gap: 2px;">
+        <h1 style="margin: 0; font-size: 20px; font-weight: 800; letter-spacing: -0.01em;">mountain-distance-horizon.jpg</h1>
+        <span style="font-size: 11.5px; color: #9AA0B0;">~/Pictures/wallpapers · added 12 Sep · JPEG · sRGB</span>
+      </div>
+      <span style="flex-grow: 1;"></span>
+      <button type="button" style="height: 32px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Add to collection</button>
+      <a href="Preview.dc.html" style="display: flex; align-items: center; height: 32px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; color: #F2F3F7; font-size: 12px; font-weight: 700; text-decoration: none;">Preview all screens</a>
+      <a href="Apply.dc.html" style="display: flex; align-items: center; height: 32px; padding: 0 18px; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 12px; font-weight: 800; text-decoration: none;">Apply everywhere</a>
+    </div>
+
+    <div style="display: flex; gap: 20px; min-height: 0;">
+
+      <!-- preview column -->
+      <div style="width: 660px; flex-shrink: 0; display: flex; flex-direction: column; gap: 12px;">
+        <div style="position: relative; height: 371px; border-radius: 14px; overflow: hidden; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%); border: 1px solid rgba(255,255,255,0.08);">
+          <svg viewBox="0 0 660 371" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <circle cx="486" cy="112" r="34" fill="#FFE1A6" opacity="0.92"/>
+            <polygon points="0,240 136,132 244,202 364,104 504,214 660,152 660,371 0,371" fill="#2C3E63" opacity="0.95"/>
+            <polygon points="0,310 128,230 272,300 408,214 552,292 660,256 660,371 0,371" fill="#1B2440"/>
+          </svg>
+          <!-- crop frame -->
+          <div style="position: absolute; left: 18px; top: 18px; right: 18px; bottom: 18px; border: 1.5px dashed rgba(255,199,0,0.8); border-radius: 6px;"></div>
+          <span style="position: absolute; left: 26px; top: 26px; padding: 3px 9px; border-radius: 999px; background: rgba(10,13,24,0.8); color: #FFC700; font-size: 10.5px; font-weight: 800; letter-spacing: 0.04em;">CROP FOR 1920 × 1080</span>
+          <div style="position: absolute; right: 26px; bottom: 26px; display: flex; gap: 6px;">
+            <span style="padding: 4px 10px; border-radius: 999px; background: rgba(10,13,24,0.8); font-size: 11px; font-weight: 700;">3840 × 2160</span>
+            <span style="padding: 4px 10px; border-radius: 999px; background: rgba(10,13,24,0.8); font-size: 11px; font-weight: 700;">16:9</span>
+          </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="font-size: 11.5px; font-weight: 700; color: #9AA0B0;">FIT</span>
+          <div style="display: flex; gap: 4px; padding: 3px; border-radius: 999px; background: #252A3E; border: 1px solid rgba(255,255,255,0.08);">
+            <button type="button" style="height: 26px; padding: 0 14px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 11.5px; font-weight: 800;">Fill</button>
+            <button type="button" style="height: 26px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: #C7CBD6; font-size: 11.5px; font-weight: 700;">Fit</button>
+            <button type="button" style="height: 26px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: #C7CBD6; font-size: 11.5px; font-weight: 700;">Center</button>
+            <button type="button" style="height: 26px; padding: 0 14px; border: 0; border-radius: 999px; background: transparent; color: #C7CBD6; font-size: 11.5px; font-weight: 700;">Stretch</button>
+          </div>
+          <span style="font-size: 11.5px; color: #9AA0B0;">Drag the frame to set the focal point — every screen uses this crop</span>
+        </div>
+
+        <!-- surface tiles -->
+        <div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px;">
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: #252A3E; border: 1px solid rgba(255,199,0,0.3);">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFC700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2.5" y="4" width="19" height="13" rx="2"/><path d="M9 20h6"/></svg>
+            <span style="font-size: 11.5px; font-weight: 700;">Desktop</span>
+            <span style="font-size: 10px; font-weight: 800; color: #FFC700; letter-spacing: 0.03em;">SET NOW</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: #252A3E; border: 1px solid rgba(255,199,0,0.3);">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFC700" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            <span style="font-size: 11.5px; font-weight: 700;">Lock</span>
+            <span style="font-size: 10px; font-weight: 800; color: #FFC700; letter-spacing: 0.03em;">SET NOW</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#C7CBD6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.2"/><path d="M5 20a7 7 0 0 1 14 0"/></svg>
+            <span style="font-size: 11.5px; font-weight: 700;">Login</span>
+            <span style="font-size: 10px; font-weight: 700; color: #9AA0B0;">Mint default</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#C7CBD6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 6.5v5"/></svg>
+            <span style="font-size: 11.5px; font-weight: 700;">Boot splash</span>
+            <span style="font-size: 10px; font-weight: 700; color: #9AA0B0;">mint-logo</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 6px; padding: 10px; border-radius: 12px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#C7CBD6" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M7 10h10M7 14h6"/></svg>
+            <span style="font-size: 11.5px; font-weight: 700;">Boot menu</span>
+            <span style="font-size: 10px; font-weight: 700; color: #9AA0B0;">plain black</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- detail column -->
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 12px; min-width: 0;">
+
+        <div style="display: flex; align-items: center; gap: 16px; padding: 14px 16px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+          <div style="position: relative; width: 64px; height: 64px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="64" height="64"><circle cx="18" cy="18" r="15.5" fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="4"/><circle cx="18" cy="18" r="15.5" fill="none" stroke="#FFC700" stroke-width="4" stroke-linecap="round" stroke-dasharray="88.6 97.4" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 19px; font-weight: 800; font-variant-numeric: tabular-nums;">91</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px;">
+            <span style="font-size: 13.5px; font-weight: 800;">Suitability 91 / 100</span>
+            <span style="font-size: 11.5px; color: #C7CBD6; line-height: 1.4;">Above native on every output, 16:9,<br>calm sky where the login prompt sits</span>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px; padding: 14px 16px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+          <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; color: #9AA0B0;">SCORE BREAKDOWN</span>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 116px; font-size: 11.5px; color: #C7CBD6;">Resolution</span>
+            <div style="flex-grow: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.10);"><div style="height: 6px; width: 100%; border-radius: 999px; background: #FFC700;"></div></div>
+            <span style="width: 40px; text-align: right; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">35/35</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 116px; font-size: 11.5px; color: #C7CBD6;">Aspect match</span>
+            <div style="flex-grow: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.10);"><div style="height: 6px; width: 100%; border-radius: 999px; background: #FFC700;"></div></div>
+            <span style="width: 40px; text-align: right; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">20/20</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 116px; font-size: 11.5px; color: #C7CBD6;">Detail spread</span>
+            <div style="flex-grow: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.10);"><div style="height: 6px; width: 80%; border-radius: 999px; background: #FFC700;"></div></div>
+            <span style="width: 40px; text-align: right; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">12/15</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 116px; font-size: 11.5px; color: #C7CBD6;">Color coherence</span>
+            <div style="flex-grow: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.10);"><div style="height: 6px; width: 90%; border-radius: 999px; background: #FFC700;"></div></div>
+            <span style="width: 40px; text-align: right; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">9/10</span>
+          </div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 116px; font-size: 11.5px; color: #C7CBD6;">Format · penalties</span>
+            <div style="flex-grow: 1; height: 6px; border-radius: 999px; background: rgba(255,255,255,0.10);"><div style="height: 6px; width: 75%; border-radius: 999px; background: #FFB500;"></div></div>
+            <span style="width: 40px; text-align: right; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums;">15/20</span>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; padding: 14px 16px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 10.5px; color: #9AA0B0;">Resolution</span><span style="font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;">3840 × 2160</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 10.5px; color: #9AA0B0;">File size</span><span style="font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;">2.4 MB</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 10.5px; color: #9AA0B0;">Format</span><span style="font-size: 12.5px; font-weight: 700;">JPEG · no alpha</span></div>
+          <div style="display: flex; flex-direction: column; gap: 2px;"><span style="font-size: 10.5px; color: #9AA0B0;">Source</span><span style="font-size: 12.5px; font-weight: 700;">~/Pictures/wallpapers</span></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 9px; padding: 14px 16px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+          <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; color: #9AA0B0;">PALETTE</span>
+          <div style="display: flex; gap: 6px;">
+            <div style="flex-grow: 1; height: 26px; border-radius: 7px; background: #1B2A4A;"></div>
+            <div style="flex-grow: 1; height: 26px; border-radius: 7px; background: #3C6E9B;"></div>
+            <div style="flex-grow: 1; height: 26px; border-radius: 7px; background: #E9A05A;"></div>
+            <div style="flex-grow: 1; height: 26px; border-radius: 7px; background: #FFE1A6;"></div>
+            <div style="flex-grow: 1; height: 26px; border-radius: 7px; background: #2C3E63;"></div>
+          </div>
+          <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+            <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,199,0,0.14); color: #FFC700; font-size: 10.5px; font-weight: 800;">NATIVE</span>
+            <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,199,0,0.14); color: #FFC700; font-size: 10.5px; font-weight: 800;">4K</span>
+            <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,0.08); color: #C7CBD6; font-size: 10.5px; font-weight: 700;">TEXT-SAFE</span>
+            <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,0.08); color: #C7CBD6; font-size: 10.5px; font-weight: 700;">DARK</span>
+            <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,0.08); color: #C7CBD6; font-size: 10.5px; font-weight: 700;">NO DUPLICATES</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

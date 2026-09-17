@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #1E2233; font-family: Manrope, Ubuntu, Cantarell, sans-serif; color: #F2F3F7; }
+    a { color: #FFC700; } a:hover { color: #FFDA5E; }
+    button { font-family: inherit; cursor: pointer; }
+    code { font-family: "JetBrains Mono", "Ubuntu Mono", monospace; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 800px; box-sizing: border-box; display: flex; background: #1E2233; overflow: hidden;">
+  <dc-import name="Sidebar" active="preview" hint-size="150px,800px"></dc-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-end; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">All five screens</h1>
+        <span style="font-size: 12.5px; color: #9AA0B0;">{{scene.name}} · rendered through the same fill crop the apply will install</span>
+      </div>
+      <span style="flex-grow: 1;"></span>
+      <button type="button" style="height: 32px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Run the real splash (8 s)</button>
+      <a href="Apply.dc.html" style="display: flex; align-items: center; height: 32px; padding: 0 18px; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 12px; font-weight: 800; text-decoration: none;">Apply everywhere</a>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px;">
+
+      <!-- desktop -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 800;">Desktop</span>
+          <span style="font-size: 10.5px; color: #9AA0B0;">now</span>
+        </div>
+        <div style="position: relative; height: 196px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background-image: {{scene.sky}};">
+          <svg viewBox="0 0 320 196" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <circle cx="238" cy="52" r="18" fill="{{scene.sun}}" opacity="{{scene.sunOpacity}}"/>
+            <polygon points="0,124 66,68 118,104 176,54 244,112 320,78 320,196 0,196" fill="{{scene.far}}"/>
+            <polygon points="0,160 62,118 132,156 198,110 268,150 320,130 320,196 0,196" fill="{{scene.near}}"/>
+          </svg>
+          <div style="position: absolute; left: 10px; top: 10px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+            <div style="width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.28);"></div>
+            <div style="width: 26px; height: 26px; border-radius: 7px; background: rgba(255,255,255,0.18); border: 1px solid rgba(255,255,255,0.28);"></div>
+          </div>
+          <div style="position: absolute; left: 0; right: 0; bottom: 0; height: 24px; background: rgba(12,15,26,0.88); display: flex; align-items: center; gap: 6px; padding: 0 8px;">
+            <span style="width: 15px; height: 15px; border-radius: 4px; background: #FFC700;"></span>
+            <span style="width: 15px; height: 15px; border-radius: 4px; background: rgba(255,255,255,0.32);"></span>
+            <span style="width: 15px; height: 15px; border-radius: 4px; background: rgba(255,255,255,0.32);"></span>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 9px; font-weight: 700; color: #E4E6EC; font-variant-numeric: tabular-nums;">21:14</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- lock -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 800;">Lock screen</span>
+          <span style="font-size: 10.5px; color: #9AA0B0;">next lock</span>
+        </div>
+        <div style="position: relative; height: 196px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background-image: {{scene.sky}};">
+          <svg viewBox="0 0 320 196" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <polygon points="0,124 66,68 118,104 176,54 244,112 320,78 320,196 0,196" fill="{{scene.far}}"/>
+            <polygon points="0,160 62,118 132,156 198,110 268,150 320,130 320,196 0,196" fill="{{scene.near}}"/>
+          </svg>
+          <div style="position: absolute; inset: 0; background: rgba(8,11,20,0.34); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;">
+            <span style="font-size: 40px; font-weight: 800; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; line-height: 1;">21:14</span>
+            <span style="font-size: 11px; color: #E4E6EC;">Thursday, 17 September</span>
+            <div style="margin-top: 10px; width: 150px; height: 26px; border-radius: 999px; background: rgba(12,15,26,0.6); border: 1px solid rgba(255,255,255,0.22); display: flex; align-items: center; gap: 7px; padding: 0 10px;">
+              <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#E4E6EC" stroke-width="1.9" stroke-linecap="round"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+              <span style="font-size: 10px; color: #C7CBD6;">Password</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- login -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 800;">Login screen</span>
+          <span style="font-size: 10.5px; color: #9AA0B0;">next logout · slick-greeter</span>
+        </div>
+        <div style="position: relative; height: 196px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background-image: {{scene.sky}};">
+          <svg viewBox="0 0 320 196" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <polygon points="0,124 66,68 118,104 176,54 244,112 320,78 320,196 0,196" fill="{{scene.far}}"/>
+            <polygon points="0,160 62,118 132,156 198,110 268,150 320,130 320,196 0,196" fill="{{scene.near}}"/>
+          </svg>
+          <div style="position: absolute; inset: 0; background: rgba(8,11,20,0.30); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 7px;">
+            <span style="width: 44px; height: 44px; border-radius: 999px; background: rgba(255,255,255,0.86); border: 2px solid rgba(255,255,255,0.5);"></span>
+            <span style="font-size: 12px; font-weight: 700;">user</span>
+            <div style="width: 168px; height: 28px; border-radius: 6px; background: rgba(12,15,26,0.62); border: 1px solid rgba(255,255,255,0.28);"></div>
+          </div>
+          <div style="position: absolute; left: 0; right: 0; top: 0; height: 20px; background: rgba(12,15,26,0.75); display: flex; align-items: center; gap: 8px; padding: 0 9px;">
+            <span style="font-size: 9px; color: #C7CBD6;">Linux Mint 22.2</span>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 9px; color: #C7CBD6;">Cinnamon</span>
+            <span style="font-size: 9px; color: #C7CBD6;">⏻</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- boot splash -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 800;">Boot splash</span>
+          <span style="font-size: 10.5px; color: #9AA0B0;">next boot · Plymouth</span>
+        </div>
+        <div style="position: relative; height: 196px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background-image: {{scene.sky}};">
+          <svg viewBox="0 0 320 196" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <polygon points="0,124 66,68 118,104 176,54 244,112 320,78 320,196 0,196" fill="{{scene.far}}"/>
+            <polygon points="0,160 62,118 132,156 198,110 268,150 320,130 320,196 0,196" fill="{{scene.near}}"/>
+          </svg>
+          <div style="position: absolute; left: 0; right: 0; top: 71%; display: flex; flex-direction: column; align-items: center; gap: 8px;">
+            <svg viewBox="0 0 44 44" width="36" height="36" fill="none">
+              <circle cx="22" cy="22" r="16" stroke="rgba(255,255,255,0.26)" stroke-width="3.4"/>
+              <path d="M22 6a16 16 0 0 1 16 16" stroke="#FFC700" stroke-width="3.4" stroke-linecap="round"/>
+            </svg>
+            <span style="font-size: 9.5px; letter-spacing: 0.06em; color: rgba(255,255,255,0.75);">LINUX MINT 22.2</span>
+          </div>
+          <span style="position: absolute; left: 10px; top: 10px; padding: 3px 8px; border-radius: 999px; background: rgba(10,13,24,0.8); color: #FFC700; font-size: 9.5px; font-weight: 800;">PIXEL-EXACT</span>
+        </div>
+      </div>
+
+      <!-- boot menu -->
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        <div style="display: flex; align-items: baseline; gap: 8px;">
+          <span style="font-size: 12px; font-weight: 800;">Boot menu</span>
+          <span style="font-size: 10.5px; color: #9AA0B0;">next boot · GRUB 2</span>
+        </div>
+        <div style="position: relative; height: 196px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.08); background-image: {{scene.sky}};">
+          <svg viewBox="0 0 320 196" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <polygon points="0,124 66,68 118,104 176,54 244,112 320,78 320,196 0,196" fill="{{scene.far}}"/>
+            <polygon points="0,160 62,118 132,156 198,110 268,150 320,130 320,196 0,196" fill="{{scene.near}}"/>
+          </svg>
+          <div style="position: absolute; left: 11%; top: 16%; right: 11%; bottom: 24%; border: 1px solid rgba(255,255,255,0.45); background: rgba(8,11,20,0.66); padding: 9px 11px; display: flex; flex-direction: column; gap: 5px;">
+            <span style="font-size: 9.5px; font-weight: 700; color: #1A1400; background: #FFC700; padding: 2px 6px;">Linux Mint 22.2 Cinnamon</span>
+            <span style="font-size: 9.5px; color: #E4E6EC; padding: 2px 6px;">Advanced options for Linux Mint</span>
+            <span style="font-size: 9.5px; color: #E4E6EC; padding: 2px 6px;">Memory test (memtest86+)</span>
+            <span style="font-size: 9.5px; color: #E4E6EC; padding: 2px 6px;">UEFI Firmware Settings</span>
+          </div>
+          <span style="position: absolute; left: 11%; bottom: 8%; font-size: 8.5px; color: rgba(255,255,255,0.7);">Use ↑ and ↓ to select · Enter to boot</span>
+        </div>
+      </div>
+
+      <!-- explainer -->
+      <div style="display: flex; flex-direction: column; gap: 10px; padding: 14px; border-radius: 12px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; color: #FFC700;">WHAT YOU SEE IS WHAT GETS INSTALLED</span>
+        <span style="font-size: 11.5px; color: #C7CBD6; line-height: 1.5;">Each preview is built by the same transform the apply uses — zoom, center-crop to 1920 × 1080, then the format profile for that screen. The crop cannot drift between preview and result.</span>
+        <div style="display: flex; flex-direction: column; gap: 5px; padding: 10px; border-radius: 9px; background: #1E2233;">
+          <span style="font-size: 10px; color: #9AA0B0;">TARGETS</span>
+          <span style="font-size: 10.5px; color: #C7CBD6; line-height: 1.6;"><code>desktop</code> original file<br><code>login</code> JPEG q92 → /usr/share/backgrounds<br><code>splash</code> PNG, no alpha → theme dir<br><code>menu</code> 8-bit PNG → /boot/grub</span>
+        </div>
+        <span style="flex-grow: 1;"></span>
+        <span style="font-size: 11px; color: #9AA0B0; line-height: 1.45;">The boot splash preview uses the generated Plymouth theme's own geometry; "Run the real splash" shows the actual thing for 8 seconds.</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"wallpaper":{"editor":"enum","options":["Mountain","Forest","Night"],"default":"Mountain","section":"Preview"},"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const scenes = {
+      Mountain: {
+        name: 'mountain-distance-horizon.jpg',
+        sky: 'linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%)',
+        far: '#2C3E63', near: '#1B2440', sun: '#FFE1A6', sunOpacity: '0.92',
+      },
+      Forest: {
+        name: 'valley-fog-pines.png',
+        sky: 'linear-gradient(165deg, #0F2A24 0%, #1E5B45 55%, #7FBF6A 100%)',
+        far: '#123A2E', near: '#0B231C', sun: '#D8F0B8', sunOpacity: '0.55',
+      },
+      Night: {
+        name: 'night-ridge-stars.jpg',
+        sky: 'radial-gradient(120% 95% at 32% 22%, #3E2E6B 0%, #22203E 55%, #0E0F1E 100%)',
+        far: '#1A1A33', near: '#111124', sun: '#F2F3F7', sunOpacity: '0.35',
+      },
+    };
+    return { scene: scenes[this.props.wallpaper] ?? scenes.Mountain };
+  }
+}
+</script>
+</body>
+</html>

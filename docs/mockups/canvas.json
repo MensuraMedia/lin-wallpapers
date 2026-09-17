@@ -1,0 +1,40 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-09-17T18:30:00Z" },
+  "title": "Lin Wallpapers — UI mockups",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1280, "h": 800, "title": "Browse", "is_interactive": true },
+    "Image.dc.html": { "x": 1360, "y": 0, "w": 1280, "h": 800, "title": "Image detail", "is_interactive": true },
+    "Screens.dc.html": { "x": 2720, "y": 0, "w": 1280, "h": 800, "title": "Screens · what was detected", "is_interactive": true },
+    "Preview.dc.html": { "x": 0, "y": 1200, "w": 1280, "h": 800, "title": "Preview · all five screens", "is_interactive": true },
+    "Apply.dc.html": { "x": 1360, "y": 1200, "w": 1280, "h": 800, "title": "Apply · the plan and the result", "is_interactive": true },
+    "Sidebar.dc.html": { "x": 2720, "y": 1200, "w": 150, "h": 800, "title": "Sidebar · component", "is_interactive": true }
+  },
+  "order": ["Main.dc.html", "Image.dc.html", "Screens.dc.html", "Preview.dc.html", "Apply.dc.html", "Sidebar.dc.html"],
+  "notes": {
+    "t1": {
+      "x": 0,
+      "y": -300,
+      "text": "Lin Wallpapers · find, judge, preview",
+      "kind": "title1",
+      "maxW": 4000
+    },
+    "t2": {
+      "x": 0,
+      "y": 900,
+      "text": "Preview every screen, then apply as one transaction",
+      "kind": "title1",
+      "maxW": 4000
+    },
+    "n1": {
+      "x": 2960,
+      "y": 1200,
+      "w": 600,
+      "text": "Colors: universal-themes/ui-kit-yellow-gray-yello.jpg — #1E2233 window, #252A3E surface, #2B3044 raised, one yellow accent #FFC700. The wallpaper carries the color; the chrome stays neutral.\n\nThe Apply artboard's step list is the base script (reference/apply-08-screen-wallpaper.sh) turned into a plan: render, copy to a greeter-readable path, set the greeter keys, generate the Plymouth theme, update-alternatives, GRUB drop-in, one initramfs rebuild, one update-grub, verify.\n\nScreens shows detection, not assumption — the same build serves Mint, Ubuntu, Debian, Kubuntu, Xubuntu, MX and the rest.",
+      "color": "gray"
+    }
+  },
+  "designSystems": []
+}

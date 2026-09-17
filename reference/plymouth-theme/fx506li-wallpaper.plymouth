@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=FX506LI Wallpaper
+Description=Desktop wallpaper with the Linux Mint spinner (installed by scripts/apply-08-screen-wallpaper.sh)
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/fx506li-wallpaper
+ScriptFile=/usr/share/plymouth/themes/fx506li-wallpaper/fx506li-wallpaper.script

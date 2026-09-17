@@ -1,0 +1,29 @@
+Lin Wallpapers — Third-party notices
+
+1. gtk-python-dashboard-starter
+   https://github.com/mikesdatawork/gtk-python-dashboard-starter  (author: mikesdatawork)
+   The application shell (window, sidebar, page routing, theme applicator, layout/theme config) is
+   derived from this template. Its README states: "Free for personal and educational use." Commercial
+   use of derived code may require the template author's permission in addition to MensuraMedia's.
+
+2. UI design reference
+   universal-instruction-set/universal-themes/image-reference/ui-kit-yellow-gray-yello.jpg
+   (MensuraMedia/universal-instruction-set). Used as a color/style reference only; no image content
+   is redistributed.
+
+3. Runtime libraries (not bundled; installed from the distribution)
+   PyGObject (LGPL-2.1+), GTK 3 (LGPL-2.1+), GdkPixbuf (LGPL-2.1+), pycairo (LGPL-2.1 / MPL-1.1),
+   Pillow (MIT-CMU), SQLite (public domain), polkit (LGPL-2.0+), systemd/D-Bus components used over
+   their public interfaces.
+
+4. System tools invoked, never bundled or modified
+   plymouth (GPL-2.0+), GRUB 2 (GPL-3.0+), initramfs-tools (GPL-2.0+), update-alternatives/dpkg (GPL-2.0+),
+   slick-greeter (GPL-3.0). Lin Wallpapers generates its own Plymouth theme; distribution-provided
+   throbber/spinner assets copied into a generated theme remain under their original licenses and are
+   not redistributed by this project.
+
+5. Wallpaper images
+   Images catalogued or applied by this application belong to their respective owners. The application
+   copies them only into system paths on the user's own machine.
+
+Additional components will be listed here as they are added.

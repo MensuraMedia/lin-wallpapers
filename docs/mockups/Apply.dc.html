@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #1E2233; font-family: Manrope, Ubuntu, Cantarell, sans-serif; color: #F2F3F7; }
+    a { color: #FFC700; } a:hover { color: #FFDA5E; }
+    button { font-family: inherit; cursor: pointer; }
+    code { font-family: "JetBrains Mono", "Ubuntu Mono", monospace; font-size: 10.5px; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 800px; box-sizing: border-box; display: flex; background: #1E2233; overflow: hidden;">
+  <dc-import name="Sidebar" active="history" hint-size="150px,800px"></dc-import>
+
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-end; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">Apply everywhere</h1>
+        <span style="font-size: 12.5px; color: #9AA0B0;">Every step below comes from the base script — shown before anything is written</span>
+      </div>
+      <span style="flex-grow: 1;"></span>
+      <button type="button" style="height: 32px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.14); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Copy plan as <code style="font-size: 11px;">linwp</code> command</button>
+    </div>
+
+    <div style="display: flex; gap: 16px; min-height: 0;">
+
+      <!-- plan sheet -->
+      <div style="width: 636px; flex-shrink: 0; display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 16px; background: #252A3E; border: 1px solid rgba(255,255,255,0.08);">
+        <div style="display: flex; align-items: center; gap: 12px;">
+          <div style="width: 52px; height: 52px; border-radius: 10px; overflow: hidden; position: relative; flex-shrink: 0; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);">
+            <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;"><polygon points="0,116 66,64 118,98 176,50 244,104 320,74 320,180 0,180" fill="#2C3E63"/><polygon points="0,150 62,112 132,146 198,104 268,142 320,124 320,180 0,180" fill="#1B2440"/></svg>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 2px;">
+            <span style="font-size: 13.5px; font-weight: 800;">mountain-distance-horizon.jpg → 5 screens</span>
+            <span style="font-size: 11.5px; color: #9AA0B0;">Fill crop · 1920 × 1080 · 11 steps · about 25 seconds</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <span style="padding: 4px 10px; border-radius: 999px; background: rgba(255,199,0,0.16); color: #FFC700; font-size: 10.5px; font-weight: 800;">PLAN</span>
+        </div>
+
+        <div style="height: 1px; background: rgba(255,255,255,0.08);"></div>
+
+        <div style="display: flex; flex-direction: column; gap: 7px;">
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,255,255,0.10); color: #C7CBD6; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">1</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Render the image — zoom and center-crop to 1920 × 1080</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>imaging/transform.py</code> · the render() step of the base script · JPEG q92 and PNG outputs</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 10.5px; color: #9AA0B0; font-variant-numeric: tabular-nums; flex-shrink: 0;">0.4 s</span>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,255,255,0.10); color: #C7CBD6; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">2</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Desktop + lock screen — write the wallpaper setting</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>desktop_cinnamon</code> · org.cinnamon.desktop.background picture-uri, picture-options=zoom</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 10.5px; color: #9AA0B0; font-variant-numeric: tabular-nums; flex-shrink: 0;">instant</span>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,199,0,0.18); color: #FFC700; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">3</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Back up everything this plan touches</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>/var/backups/lin-wallpapers/20260917-142215/</code> + manifest (modes, owners, sha256, previous theme)</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FFC700" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 3px;"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,199,0,0.18); color: #FFC700; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">4</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Login screen — copy the image where the greeter can read it</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>/usr/share/backgrounds/lin-wallpapers/wallpaper.jpg</code> mode 0644 (your home is 750)</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FFC700" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 3px;"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,199,0,0.18); color: #FFC700; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">5</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Login screen — set the greeter keys</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>slick-greeter.conf</code> [Greeter] background=… · draw-user-backgrounds=false</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FFC700" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 3px;"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,199,0,0.18); color: #FFC700; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">6</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Boot splash — generate the Plymouth theme</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>/usr/share/plymouth/themes/lin-wallpapers/</code> · background + 30 spinner frames taken from mint-logo</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FFC700" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 3px;"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,199,0,0.18); color: #FFC700; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">7</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Boot splash — make it the default theme</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>update-alternatives --install … default.plymouth … 150</code> then <code>--set</code></span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FFC700" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 3px;"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,199,0,0.18); color: #FFC700; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">8</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Boot menu — write the image and the GRUB drop-in</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>/boot/grub/lin-wallpapers.png</code> · <code>/etc/default/grub.d/99-lin-wallpapers-background.cfg</code> (never /etc/default/grub)</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FFC700" stroke-width="2" stroke-linecap="round" style="flex-shrink: 0; margin-top: 3px;"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,199,0,0.18); color: #FFC700; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">9</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Rebuild the initramfs for all 3 kernels — once</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>update-initramfs -u -k all</code> · the theme must live inside the boot image</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 10.5px; color: #FFB500; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0;">~20 s</span>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(255,199,0,0.18); color: #FFC700; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">10</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Regenerate the boot menu — once</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;"><code>update-grub</code> (or <code>grub-mkconfig -o</code> where that is what the machine has)</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 10.5px; color: #9AA0B0; font-variant-numeric: tabular-nums; flex-shrink: 0;">3 s</span>
+          </div>
+
+          <div style="display: flex; gap: 10px; align-items: flex-start;">
+            <span style="width: 17px; height: 17px; border-radius: 999px; background: rgba(74,222,128,0.18); color: #4ADE80; font-size: 9.5px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px;">11</span>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 12px; font-weight: 700;">Verify, then commit — or roll everything back</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;">Greeter config parses · alternative resolves · theme present in all 3 initramfs images · grub.cfg regenerated</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 10.5px; color: #9AA0B0; font-variant-numeric: tabular-nums; flex-shrink: 0;">1 s</span>
+          </div>
+        </div>
+
+        <div style="height: 1px; background: rgba(255,255,255,0.08);"></div>
+
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#FFB500" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4M12 17h.01"/></svg>
+          <span style="font-size: 11.5px; color: #C7CBD6; line-height: 1.4;">Steps 3–10 need administrator authorization once. Desktop and lock change immediately; log out for the login screen, reboot for the splash and menu.</span>
+          <span style="flex-grow: 1;"></span>
+          <button type="button" style="height: 34px; padding: 0 16px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12.5px; font-weight: 700; flex-shrink: 0;">Cancel</button>
+          <button type="button" style="height: 34px; padding: 0 20px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 12.5px; font-weight: 800; flex-shrink: 0;">Apply</button>
+        </div>
+      </div>
+
+      <!-- result column -->
+      <div style="flex-grow: 1; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+
+        <div style="display: flex; flex-direction: column; gap: 11px; padding: 16px; border-radius: 16px; background: #252A3E; border: 1px solid rgba(74,222,128,0.28);">
+          <div style="display: flex; align-items: center; gap: 9px;">
+            <span style="width: 22px; height: 22px; border-radius: 999px; background: rgba(74,222,128,0.18); display: flex; align-items: center; justify-content: center;">
+              <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+            </span>
+            <span style="font-size: 13.5px; font-weight: 800;">Applied and verified</span>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 11px; color: #9AA0B0; font-variant-numeric: tabular-nums;">24.6 s</span>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 6px;">
+            <div style="display: flex; align-items: center; gap: 8px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg><span style="font-size: 11.5px; font-weight: 700;">Desktop</span><span style="flex-grow: 1;"></span><span style="font-size: 11px; color: #9AA0B0;">visible now</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg><span style="font-size: 11.5px; font-weight: 700;">Lock screen</span><span style="flex-grow: 1;"></span><span style="font-size: 11px; color: #9AA0B0;">follows the desktop</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg><span style="font-size: 11.5px; font-weight: 700;">Login screen</span><span style="flex-grow: 1;"></span><span style="font-size: 11px; color: #9AA0B0;">at next logout</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg><span style="font-size: 11.5px; font-weight: 700;">Boot splash</span><span style="flex-grow: 1;"></span><span style="font-size: 11px; color: #9AA0B0;">in 3 of 3 initramfs</span></div>
+            <div style="display: flex; align-items: center; gap: 8px;"><svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#4ADE80" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;"><path d="m5 12.5 4.5 4.5L19 7"/></svg><span style="font-size: 11.5px; font-weight: 700;">Boot menu</span><span style="flex-grow: 1;"></span><span style="font-size: 11px; color: #9AA0B0;">grub.cfg regenerated</span></div>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 3px; padding: 10px; border-radius: 9px; background: #1E2233;">
+            <span style="font-size: 10px; font-weight: 800; letter-spacing: 0.06em; color: #9AA0B0;">BACKUP</span>
+            <span style="font-size: 10.5px; color: #C7CBD6;"><code>/var/backups/lin-wallpapers/20260917-142215/</code></span>
+            <span style="font-size: 10.5px; color: #9AA0B0;">4 files · manifest.json · previous theme: mint-logo</span>
+          </div>
+
+          <div style="display: flex; gap: 8px;">
+            <button type="button" style="flex-grow: 1; height: 32px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Undo this apply</button>
+            <button type="button" style="flex-grow: 1; height: 32px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Show the splash now</button>
+          </div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; padding: 16px; border-radius: 16px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07); min-height: 0;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; color: #9AA0B0;">HISTORY</span>
+            <span style="flex-grow: 1;"></span>
+            <span style="font-size: 10.5px; color: #9AA0B0;">every apply is undoable</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; background: #2B3044;">
+            <div style="width: 42px; height: 26px; border-radius: 5px; flex-shrink: 0; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);"></div>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">mountain-distance-horizon.jpg</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;">today 14:22 · all 5 screens</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="padding: 3px 8px; border-radius: 999px; background: rgba(74,222,128,0.15); color: #4ADE80; font-size: 9.5px; font-weight: 800; flex-shrink: 0;">OK</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; background: #2B3044;">
+            <div style="width: 42px; height: 26px; border-radius: 5px; flex-shrink: 0; background-image: linear-gradient(160deg, #0F2A24 0%, #1E5B45 55%, #7FBF6A 100%);"></div>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">valley-fog-pines.png</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;">12 Sep 21:04 · desktop, lock</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="padding: 3px 8px; border-radius: 999px; background: rgba(74,222,128,0.15); color: #4ADE80; font-size: 9.5px; font-weight: 800; flex-shrink: 0;">OK</span>
+          </div>
+
+          <div style="display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 10px; background: #2B3044;">
+            <div style="width: 42px; height: 26px; border-radius: 5px; flex-shrink: 0; background-image: linear-gradient(200deg, #2B1233 0%, #7A2B4E 50%, #E0703F 100%);"></div>
+            <div style="display: flex; flex-direction: column; gap: 1px; min-width: 0;">
+              <span style="font-size: 11.5px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">skyline-dusk-01.jpg</span>
+              <span style="font-size: 10.5px; color: #9AA0B0;">9 Sep 18:41 · boot menu — /boot was full</span>
+            </div>
+            <span style="flex-grow: 1;"></span>
+            <span style="padding: 3px 8px; border-radius: 999px; background: rgba(239,68,68,0.16); color: #EF4444; font-size: 9.5px; font-weight: 800; flex-shrink: 0;">ROLLED BACK</span>
+          </div>
+
+          <span style="flex-grow: 1;"></span>
+          <span style="font-size: 11px; color: #9AA0B0; line-height: 1.45;">If a boot screen ever misbehaves: remove <code>splash</code> from the kernel line in the boot menu for one boot, then undo.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

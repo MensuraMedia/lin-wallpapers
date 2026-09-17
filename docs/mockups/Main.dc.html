@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #1E2233; font-family: Manrope, Ubuntu, Cantarell, sans-serif; color: #F2F3F7; }
+    a { color: #FFC700; } a:hover { color: #FFDA5E; }
+    button { font-family: inherit; cursor: pointer; }
+    input { font-family: inherit; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 800px; box-sizing: border-box; display: flex; background: #1E2233; overflow: hidden;">
+
+  <dc-import name="Sidebar" active="browse" hint-size="150px,800px"></dc-import>
+
+  <!-- Content -->
+  <div style="flex-grow: 1; box-sizing: border-box; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+
+    <div style="display: flex; align-items: flex-end; gap: 16px;">
+      <div style="display: flex; flex-direction: column; gap: 3px;">
+        <h1 style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: -0.01em;">Browse</h1>
+        <span style="font-size: 12.5px; color: #9AA0B0;">1,864 images catalogued · 412 suitable for every screen</span>
+      </div>
+      <span style="flex-grow: 1;"></span>
+      <div style="display: flex; gap: 6px; padding: 3px; border-radius: 10px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <button type="button" aria-label="Grid view" style="width: 30px; height: 26px; border: 0; border-radius: 7px; background: rgba(255,199,0,0.16); color: #FFC700; display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+        </button>
+        <button type="button" aria-label="List view" style="width: 30px; height: 26px; border: 0; border-radius: 7px; background: transparent; color: #9AA0B0; display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- scan banner -->
+    <div style="display: flex; align-items: center; gap: 12px; height: 42px; padding: 0 14px; box-sizing: border-box; border-radius: 12px; background: #252A3E; border: 1px solid rgba(255,199,0,0.22);">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#FFC700" stroke-width="2" stroke-linecap="round"><path d="M21 12a9 9 0 1 1-6.2-8.6"/></svg>
+      <span style="font-size: 12.5px; font-weight: 600;">Scanning <span style="color: #FFC700;">/data/photos</span> — 830 of 2,140 probed</span>
+      <span style="font-size: 12px; color: #9AA0B0;">·  4 roots  ·  1 drive skipped (network)</span>
+      <span style="flex-grow: 1;"></span>
+      <button type="button" style="height: 26px; padding: 0 12px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Pause</button>
+    </div>
+
+    <!-- filter bar -->
+    <div style="display: flex; align-items: center; gap: 8px;">
+      <label style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; background: #252A3E; border: 1px solid rgba(255,255,255,0.09);">
+        <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#9AA0B0" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>
+        <span style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0);">Search wallpapers</span>
+        <input type="search" placeholder="Search 1,864 images" style="width: 168px; border: 0; background: transparent; color: #F2F3F7; font-size: 12.5px; outline: none;">
+      </label>
+      <button type="button" style="height: 32px; padding: 0 13px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 12px; font-weight: 800;">≥ 1920 × 1080</button>
+      <button type="button" style="height: 32px; padding: 0 13px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 12px; font-weight: 800;">Text-safe</button>
+      <button type="button" style="height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; background: #252A3E; color: #C7CBD6; font-size: 12px; font-weight: 700;">16:9</button>
+      <button type="button" style="height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; background: #252A3E; color: #C7CBD6; font-size: 12px; font-weight: 700;">Dark</button>
+      <button type="button" style="height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; background: #252A3E; color: #C7CBD6; font-size: 12px; font-weight: 700;">Hide duplicates</button>
+      <span style="flex-grow: 1;"></span>
+      <button type="button" style="display: flex; align-items: center; gap: 7px; height: 32px; padding: 0 13px; border: 1px solid rgba(255,255,255,0.12); border-radius: 999px; background: #252A3E; color: #F2F3F7; font-size: 12px; font-weight: 700;">
+        Sort: Score
+        <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#9AA0B0" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+      </button>
+    </div>
+
+    <!-- grid -->
+    <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px; min-height: 0;">
+
+      <!-- card 1 (selected) -->
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px; border-radius: 14px; background: #252A3E; border: 2px solid #FFC700;">
+        <div style="position: relative; height: 138px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <circle cx="236" cy="54" r="17" fill="#FFE1A6" opacity="0.92"/>
+            <polygon points="0,116 66,64 118,98 176,50 244,104 320,74 320,180 0,180" fill="#2C3E63" opacity="0.95"/>
+            <polygon points="0,150 62,112 132,146 198,104 268,142 320,124 320,180 0,180" fill="#1B2440"/>
+          </svg>
+          <div style="position: absolute; top: 7px; right: 7px; width: 22px; height: 22px; border-radius: 999px; background: #FFC700; display: flex; align-items: center; justify-content: center;">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="#1A1400" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+          </div>
+          <div style="position: absolute; left: 7px; bottom: 7px; display: flex; gap: 4px;">
+            <span style="padding: 2px 7px; border-radius: 999px; background: rgba(10,13,24,0.78); color: #FFC700; font-size: 10px; font-weight: 800;">NATIVE</span>
+            <span style="padding: 2px 7px; border-radius: 999px; background: rgba(10,13,24,0.78); color: #F2F3F7; font-size: 10px; font-weight: 700;">TEXT-SAFE</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">mountain-distance-horizon.jpg</span>
+            <span style="font-size: 11px; color: #9AA0B0; font-variant-numeric: tabular-nums;">3840 × 2160 · 2.4 MB</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <div style="position: relative; width: 30px; height: 30px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFC700" stroke-width="3" stroke-linecap="round" stroke-dasharray="86 94" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;">91</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- card 2 -->
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="position: relative; height: 138px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(160deg, #0F2A24 0%, #1E5B45 55%, #7FBF6A 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <polygon points="0,96 54,58 96,92 150,46 214,96 268,66 320,92 320,180 0,180" fill="#123A2E" opacity="0.9"/>
+            <polygon points="0,140 58,112 120,144 190,108 250,140 320,118 320,180 0,180" fill="#0B231C"/>
+          </svg>
+          <div style="position: absolute; left: 7px; bottom: 7px; display: flex; gap: 4px;">
+            <span style="padding: 2px 7px; border-radius: 999px; background: rgba(10,13,24,0.78); color: #F2F3F7; font-size: 10px; font-weight: 700;">4K</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">valley-fog-pines.png</span>
+            <span style="font-size: 11px; color: #9AA0B0; font-variant-numeric: tabular-nums;">3840 × 2160 · 6.1 MB</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <div style="position: relative; width: 30px; height: 30px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFC700" stroke-width="3" stroke-linecap="round" stroke-dasharray="82 98" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;">87</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- card 3 -->
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="position: relative; height: 138px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(200deg, #2B1233 0%, #7A2B4E 50%, #E0703F 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <rect x="0" y="120" width="320" height="60" fill="#1A0E22"/>
+            <rect x="34" y="78" width="16" height="42" fill="#241430"/><rect x="60" y="92" width="22" height="28" fill="#241430"/>
+            <rect x="96" y="62" width="18" height="58" fill="#2A1738"/><rect x="124" y="86" width="26" height="34" fill="#241430"/>
+            <rect x="164" y="70" width="20" height="50" fill="#2A1738"/><rect x="194" y="96" width="30" height="24" fill="#241430"/>
+            <rect x="236" y="76" width="18" height="44" fill="#2A1738"/><rect x="264" y="90" width="28" height="30" fill="#241430"/>
+          </svg>
+          <div style="position: absolute; left: 7px; bottom: 7px; display: flex; gap: 4px;">
+            <span style="padding: 2px 7px; border-radius: 999px; background: rgba(10,13,24,0.78); color: #F2F3F7; font-size: 10px; font-weight: 700;">DARK</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">skyline-dusk-01.jpg</span>
+            <span style="font-size: 11px; color: #9AA0B0; font-variant-numeric: tabular-nums;">2560 × 1440 · 1.8 MB</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <div style="position: relative; width: 30px; height: 30px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFC700" stroke-width="3" stroke-linecap="round" stroke-dasharray="74 106" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;">79</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- card 4 : duplicate -->
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="position: relative; height: 138px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(150deg, #10243F 0%, #21608C 60%, #6FC6D8 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <path d="M0 128 Q 80 108 160 128 T 320 128 L320 180 L0 180Z" fill="#123252" opacity="0.95"/>
+            <path d="M0 148 Q 70 132 160 150 T 320 144 L320 180 L0 180Z" fill="#0C2038"/>
+          </svg>
+          <div style="position: absolute; left: 7px; bottom: 7px; display: flex; gap: 4px;">
+            <span style="padding: 2px 7px; border-radius: 999px; background: rgba(10,13,24,0.78); color: #9AA0B0; font-size: 10px; font-weight: 800;">3 COPIES</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">coast-longexposure.jpg</span>
+            <span style="font-size: 11px; color: #9AA0B0; font-variant-numeric: tabular-nums;">1920 × 1080 · 940 KB</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <div style="position: relative; width: 30px; height: 30px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFC700" stroke-width="3" stroke-linecap="round" stroke-dasharray="70 110" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;">75</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- card 5 -->
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="position: relative; height: 138px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(180deg, #241A0E 0%, #8A5A22 55%, #E8C06A 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <path d="M0 132 Q 60 104 140 130 T 320 118 L320 180 L0 180Z" fill="#4A2F12"/>
+            <path d="M0 156 Q 90 134 180 158 T 320 148 L320 180 L0 180Z" fill="#2A1A0A"/>
+          </svg>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">dunes-golden-hour.jpg</span>
+            <span style="font-size: 11px; color: #9AA0B0; font-variant-numeric: tabular-nums;">3440 × 1440 · 3.2 MB</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <div style="position: relative; width: 30px; height: 30px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFC700" stroke-width="3" stroke-linecap="round" stroke-dasharray="66 114" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;">71</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- card 6 -->
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="position: relative; height: 138px; border-radius: 9px; overflow: hidden; background-image: radial-gradient(120% 90% at 30% 25%, #3E2E6B 0%, #22203E 55%, #0E0F1E 100%);">
+          <svg viewBox="0 0 320 180" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <circle cx="88" cy="46" r="2" fill="#F2F3F7" opacity="0.8"/><circle cx="152" cy="30" r="1.6" fill="#F2F3F7" opacity="0.7"/><circle cx="214" cy="58" r="2.2" fill="#F2F3F7" opacity="0.75"/><circle cx="268" cy="34" r="1.4" fill="#F2F3F7" opacity="0.6"/><circle cx="46" cy="72" r="1.5" fill="#F2F3F7" opacity="0.6"/>
+            <polygon points="0,140 74,96 152,140 232,102 320,138 320,180 0,180" fill="#14142A"/>
+          </svg>
+          <div style="position: absolute; left: 7px; bottom: 7px; display: flex; gap: 4px;">
+            <span style="padding: 2px 7px; border-radius: 999px; background: rgba(10,13,24,0.78); color: #F2F3F7; font-size: 10px; font-weight: 700;">TEXT-SAFE</span>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">night-ridge-stars.jpg</span>
+            <span style="font-size: 11px; color: #9AA0B0; font-variant-numeric: tabular-nums;">1920 × 1080 · 1.1 MB</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <div style="position: relative; width: 30px; height: 30px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFC700" stroke-width="3" stroke-linecap="round" stroke-dasharray="78 102" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;">83</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- card 7 : missing volume -->
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07); opacity: 0.62;">
+        <div style="position: relative; height: 138px; border-radius: 9px; overflow: hidden; background-image: linear-gradient(140deg, #2A2E3F 0%, #464C63 100%); display: flex; align-items: center; justify-content: center;">
+          <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#9AA0B0" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7.5A1.5 1.5 0 0 1 4.5 6h15A1.5 1.5 0 0 1 21 7.5v9A1.5 1.5 0 0 1 19.5 18h-15A1.5 1.5 0 0 1 3 16.5Z"/><path d="M7 18v2M17 18v2M8 12h.01"/></svg>
+          <span style="position: absolute; left: 7px; bottom: 7px; padding: 2px 7px; border-radius: 999px; background: rgba(10,13,24,0.8); color: #FFB500; font-size: 10px; font-weight: 800;">DRIVE OFFLINE</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">archive/aurora-4k.jpg</span>
+            <span style="font-size: 11px; color: #9AA0B0;">Reconnect PHOTOS-1TB</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <div style="position: relative; width: 30px; height: 30px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#9AA0B0" stroke-width="3" stroke-linecap="round" stroke-dasharray="80 100" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums; color: #9AA0B0;">85</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- card 8 : low score / portrait -->
+      <div style="display: flex; flex-direction: column; gap: 8px; padding: 6px; border-radius: 14px; background: #252A3E; border: 1px solid rgba(255,255,255,0.07);">
+        <div style="position: relative; height: 138px; border-radius: 9px; overflow: hidden; background: #1A1E2E; display: flex; align-items: center; justify-content: center;">
+          <div style="width: 66px; height: 118px; border-radius: 6px; background-image: linear-gradient(170deg, #5C4A9B 0%, #C06A8E 100%);"></div>
+          <span style="position: absolute; left: 7px; bottom: 7px; padding: 2px 7px; border-radius: 999px; background: rgba(10,13,24,0.8); color: #9AA0B0; font-size: 10px; font-weight: 800;">PORTRAIT</span>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px; padding: 0 4px 4px;">
+          <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0;">
+            <span style="font-size: 12px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">phone-shot-2026-04.jpg</span>
+            <span style="font-size: 11px; color: #9AA0B0; font-variant-numeric: tabular-nums;">1170 × 2532 · 2.9 MB</span>
+          </div>
+          <span style="flex-grow: 1;"></span>
+          <div style="position: relative; width: 30px; height: 30px; flex-shrink: 0;">
+            <svg viewBox="0 0 36 36" width="30" height="30"><circle cx="18" cy="18" r="15" fill="none" stroke="rgba(255,255,255,0.12)" stroke-width="3"/><circle cx="18" cy="18" r="15" fill="none" stroke="#FFB500" stroke-width="3" stroke-linecap="round" stroke-dasharray="30 150" transform="rotate(-90 18 18)"/></svg>
+            <span style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 800; font-variant-numeric: tabular-nums;">32</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- selection action bar -->
+    <div style="display: flex; align-items: center; gap: 12px; height: 46px; padding: 0 8px 0 16px; box-sizing: border-box; border-radius: 14px; background: #2B3044; border: 1px solid rgba(255,199,0,0.25);">
+      <span style="font-size: 12.5px; font-weight: 700;">mountain-distance-horizon.jpg selected</span>
+      <span style="font-size: 12px; color: #9AA0B0;">Currently on: Desktop · Lock screen</span>
+      <span style="flex-grow: 1;"></span>
+      <button type="button" style="height: 30px; padding: 0 14px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Preview screens</button>
+      <button type="button" style="height: 30px; padding: 0 16px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 12px; font-weight: 800;">Apply everywhere</button>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {};
+  }
+}
+</script>
+</body>
+</html>

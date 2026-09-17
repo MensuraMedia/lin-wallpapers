@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+build/
+dist/
+# GResource build output
+*.gresource
+# Debian packaging output
+debian/.debhelper/
+debian/lin-wallpapers/
+debian/files
+debian/*.log
+debian/*.substvars
+../*.deb
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+# Secrets / local state
+.env*
+.claude/settings.local.json
+.claude/worktrees/
+*.log
+# App runtime data (never committed)
+*.db
+thumbnails/
