@@ -7,11 +7,11 @@ the desktop, lock screen, login screen, boot splash and boot menu.**
 | --- | --- |
 | Document | Technical concept, v0.1 |
 | Date | 2026-09-17 |
-| Status | Concept. No application code yet; milestones in §21. |
+| Status | Concept. No application code yet; roadmap in §21, **M0 specified in [docs/milestones.md](docs/milestones.md)**. |
 | Repository | https://github.com/MensuraMedia/lin-wallpapers (package `lin-wallpapers`, app ID `io.mensuramedia.LinWallpapers`, CLI `linwp`) |
 | License | Free to use, modify, distribute; **commercial use only with prior written permission** ([LICENSE](LICENSE), [NOTICE](NOTICE)) |
 | Target platforms | Any Debian-based distribution with GTK 3: Mint, Ubuntu (and Kubuntu/Xubuntu/Lubuntu/Budgie), Debian 12+, Pop!_OS, Zorin, MX, elementary. Desktop, greeter, splash and boot manager are detected, never assumed (§4.2) |
-| Stack | Python 3.12 · **GTK 3 (PyGObject), written to port to GTK 4** (§18) · Cairo · GdkPixbuf/Pillow · SQLite · D-Bus + polkit helper |
+| Stack | Python 3.12 · **GTK 3 (PyGObject), written to port to GTK 4** (§18) · Cairo · GdkPixbuf/Pillow · SQLite · a one-shot polkit helper (**no daemon, nothing runs in the background** — §11.1) |
 | Shell template | [mikesdatawork/gtk-python-dashboard-starter](https://github.com/mikesdatawork/gtk-python-dashboard-starter) (sidebar + page routing + theme applicator) |
 | Standards | [MensuraMedia/universal-instruction-set](https://github.com/MensuraMedia/universal-instruction-set) v2026.04 (§19) |
 | Design reference | `universal-themes/image-reference/ui-kit-yellow-gray-yello.jpg` — dark navy-gray surfaces, single yellow accent (§16) |
@@ -76,10 +76,10 @@ flowchart LR
     CAT <-- jobs --- SCAN["Scanner pool<br/>walk · probe · score · hash"]
     VM --> PLAN["Apply planner<br/>per-surface plans"]
     PLAN --> UAPP["User applier<br/>GSettings / dconf"]
-    PLAN --> HC["Helper client<br/>Gio.DBusProxy"]
+    PLAN --> HC["Helper client<br/>pkexec + plan on stdin"]
   end
   subgraph System
-    HC -- system bus + polkit --> HD["lin-wallpapersd<br/>root, systemd, on demand"]
+    HC -- pkexec, one run --> HD["lin-wallpapers-helper<br/>root, runs then exits"]
     HD --> GR["GRUB writer"]
     HD --> PL["Plymouth theme writer"]
     HD --> LG["Greeter writer"]
@@ -98,8 +98,8 @@ flowchart LR
 | **Preview** (`src/preview`) | user | Render an image *as* each surface: composited mock-ups drawn with Cairo at display resolution |
 | **Transform** (`src/imaging`) | user | Fit/fill/center/stretch to a target geometry, format conversion, color quantization for GRUB, theme asset generation |
 | **Planner + appliers** (`src/apply`) | user | Turn "image × surfaces × options" into an ordered plan; execute user-space steps; hand privileged steps to the helper |
-| **Helper** (`src/helper`, `lin-wallpapersd`) | root (on demand) | The only component that writes outside `$HOME`; allow-listed operations, path validation, backups, rollback, verification |
-| **Sync agent** (`src/sync`) | user | Optional: watch the desktop wallpaper setting and re-apply the other surfaces |
+| **Helper** (`src/helper`, `lin-wallpapers-helper`) | root, only during an apply | The only component that writes outside `$HOME`; started by `pkexec`, performs one plan, exits. Allow-listed operations, path validation, backups, rollback, verification |
+| **Sync agent** (`src/sync`) | user | **Opt-in, off by default:** a session autostart entry that watches the desktop wallpaper setting and re-applies the other surfaces (§12) |
 | **CLI** (`src/cli`) | user | `linwp scan|list|show|apply|undo|sync` — the same services without the GUI, for scripting and for the reference laptop's apply-script workflow |
 
 ---
@@ -349,20 +349,56 @@ of it initramfs.
 
 ## 11. Privileged helper and security model
 
-- **`lin-wallpapersd`** is a D-Bus activated system service (`io.mensuramedia.LinWallpapers1`), started on
-  demand and idle-exiting after 30 s. It is not a login-time daemon.
-- **Six methods only:** `Probe()`, `PreviewPaths()`, `ApplyPlan(a{sv})`, `Revert(s)`, `ListBackups()`,
-  `PruneBackups(u)`. There is no "write this file" primitive and no method that takes a shell command.
+### 11.1 Nothing runs in the background
+
+**Lin Wallpapers is not a service.** There is no daemon, no systemd unit enabled at boot, no tray agent and
+no login hook. The app is a window you open when you want to change a wallpaper; when you close it, nothing
+of it is left running (`ps` shows nothing, idle CPU is zero, and it costs nothing at boot).
+
+What it produces is **ordinary operating-system configuration** — the same settings, config files, theme
+and drop-in that a person would write by hand with the base script (§4.1):
+
+| Screen | What is left behind | Who displays it afterwards |
+| --- | --- | --- |
+| Desktop / lock | A GSettings (dconf) value in your own profile | Your desktop session |
+| Login screen | An image under `/usr/share/backgrounds/lin-wallpapers/` + keys in the greeter's config | LightDM/SDDM/GDM at the next login |
+| Boot splash | A theme under `/usr/share/plymouth/themes/lin-wallpapers/`, the `default.plymouth` alternative, and the rebuilt initramfs | Plymouth, from the initramfs, at the next boot |
+| Boot menu | A PNG in `/boot/grub/` + a `/etc/default/grub.d/` drop-in baked into `grub.cfg` | GRUB at the next boot |
+
+Uninstall the app afterwards and every screen keeps the wallpaper, because the OS owns the result. The app
+is a way to make those changes easily, correctly and reversibly — not a thing that has to stay running for
+them to work.
+
+**The two exceptions, both explicit:**
+
+1. **The privileged helper runs for the seconds it takes to apply, then exits** (§11.2). It is not enabled,
+   not socket-activated at boot, and not resident.
+2. **Sync mode is opt-in and off by default** (§12). It is the only part that keeps running, it is a
+   user-session autostart entry (not a system service), it can be switched off in Settings, and the
+   wallpaper stays applied when it is off — sync only re-applies when you *change* the desktop wallpaper.
+
+### 11.2 The helper: one-shot, via pkexec
+
+- **`lin-wallpapers-helper`** is a normal executable in `/usr/libexec/`, launched through **`pkexec`** for a
+  single apply or revert, exactly the way the base script is launched with `sudo` today. It reads one plan
+  on stdin, performs it, prints the result as JSON and exits. No D-Bus name, no `.service` unit, no
+  activation, nothing to disable afterwards.
+- **One authorization per run.** A five-screen apply is one plan and one password prompt, not five.
+- **Allow-listed operations only:** `write_system_image`, `edit_ini`, `install_theme`, `set_alternative`,
+  `write_dropin`, `regen_initramfs`, `regen_bootmenu`, `revert_backup`, `probe`. There is no "write this
+  file" primitive, no destination path in the plan (destinations are constants in the helper) and no
+  operation that takes a shell command.
 - **polkit actions** are split so a policy can allow the low-risk ones and prompt for the rest:
   `…apply.login-screen`, `…apply.boot-splash`, `…apply.boot-menu`, `…revert`. Default: `auth_admin_keep`.
-- **Input validation.** The client sends an image as a file descriptor plus a declared sha256; the helper
-  re-hashes, re-decodes with a size limit, and re-runs the transform itself. It never trusts client-supplied
-  bytes as final output, and never accepts a destination path — destinations are constants in the helper.
+- **Input validation.** The image arrives as a file descriptor plus a declared sha256; the helper re-hashes,
+  re-decodes with a size limit and re-runs the transform itself, so it never writes client-supplied bytes.
 - **No shell.** `subprocess` with argument vectors, absolute binaries, a fixed environment and timeouts;
   `update-initramfs`, `update-grub`, `update-alternatives` only.
-- **Sandboxing.** systemd unit with `ProtectSystem=strict` plus explicit `ReadWritePaths=` for
-  `/etc/lightdm /usr/share/backgrounds /usr/share/plymouth/themes /boot /var/backups/lin-wallpapers`,
-  `PrivateTmp`, `NoNewPrivileges`, `RestrictAddressFamilies=AF_UNIX`, `SystemCallFilter=@system-service`.
+- **Sandboxing.** Because it is short-lived and not a unit, hardening is in-process: `umask 022`, dropped
+  ambient capabilities, `NoNewPrivileges` via `prctl`, an explicit destination allow-list checked with
+  `os.path.realpath`, and `PrivateTmp`-equivalent use of a `mkdtemp` under `/var/tmp` that it removes.
+  (A `systemd-run --scope` wrapper with `ProtectSystem=strict` and `ReadWritePaths=` is available as a
+  hardening option where systemd is present — still one-shot, still nothing enabled.)
 - **Conffile rule.** Package-owned conffiles (`/etc/default/grub`, `/etc/lightdm/lightdm.conf`) are never
   rewritten; the helper only adds drop-ins and its own files. This is a hard rule carried over from the
   reference project, where editing a conffile caused interactive prompts on the next package upgrade.
@@ -375,6 +411,11 @@ of it initramfs.
 ## 12. Sync mode
 
 Optional, off by default, one switch: **"Keep all screens matching my desktop wallpaper."**
+
+This is the only part of Lin Wallpapers that keeps running, and only if you turn it on. It is a
+**user-session autostart entry** (`~/.config/autostart/lin-wallpapers-sync.desktop`), not a system service:
+it runs as you, starts with your session, and disappears when you switch it off. Turning it off never
+changes any screen — what was applied stays applied.
 
 A user-session agent watches `org.cinnamon.desktop.background picture-uri`. On change it debounces 10 s,
 checks that the file is stable and suitable, and runs an apply for the enabled surfaces. Because the
@@ -415,12 +456,12 @@ lin-wallpapers/
 │   │   └── providers/           # desktop_{cinnamon,gnome,mate,xfce,plasma} · lock_{cinnamon,gnome,xfce,plasma}
 │   │                            # greeter_{slick,lightdm_gtk,gdm,sddm,lightdm_generic}
 │   │                            # splash_plymouth (initramfs-tools | dracut) · bootmenu_{grub,none}
-│   ├── helper/                  # service.py · methods.py · policy/ · systemd/
+│   ├── helper/                  # main.py (one-shot) · ops.py · policy/ (polkit actions)
 │   ├── sync/                    # agent.py
 │   ├── cli/                     # linwp.py
 │   └── util/                    # threads.py · log.py · errors.py · units.py
 ├── resources/                   # css/ · icons/ · fonts/ · plymouth-template/ (script theme skeleton)
-├── data/                        # .desktop · AppStream metainfo · polkit actions · D-Bus service · systemd unit
+├── data/                        # .desktop · AppStream metainfo · polkit actions (no service units)
 ├── reference/                   # THE BASE SCRIPT: apply-08-screen-wallpaper.sh + plymouth theme + grub drop-in
 ├── docs/                        # this document, README, mockups, specs
 ├── tests/                       # unit · golden-image · fake-root integration
@@ -607,7 +648,8 @@ universal files are immutable; project-specific pieces go alongside them):
 ## 20. Packaging, testing and performance
 
 **Packaging.** Native `.deb` via `debhelper` + `dh-python`: `lin-wallpapers` (GUI + CLI) and
-`lin-wallpapers-helper` (daemon, polkit actions, D-Bus and systemd units). Ships `.desktop`, AppStream
+`lin-wallpapers-helper` (the one-shot privileged helper and its polkit actions — no service units, nothing
+enabled at install time; `postinst` starts nothing). Ships `.desktop`, AppStream
 metainfo, symbolic icons and a GResource bundle. Runtime deps:
 `python3-gi gir1.2-gtk-3.0 python3-gi-cairo python3-pil gir1.2-gdkpixbuf-2.0 polkitd dbus`; recommends
 `plymouth grub2-common`. Nothing in the dependency list or the maintainer scripts is distribution-specific:
@@ -636,7 +678,7 @@ memory < 250 MB with a 20,000-image catalogue; idle CPU 0 % (no polling, watches
 | **M2** | Suitability scoring, badges, duplicates; Image page with metadata, palette and fit control |
 | **M3** | Transform pipeline + preview compositor; Screens page with capability probes; all five previews |
 | **M4** | Apply engine: planner, backups, verification, rollback, History/undo. Desktop + lock end-to-end on Cinnamon, GNOME, MATE, Xfce, Plasma (the user-space half of the §4.2 matrix) |
-| **M5** | Helper daemon, polkit actions, systemd unit; the base script's three privileged surfaces end-to-end (slick-greeter, lightdm-gtk-greeter, Plymouth via initramfs-tools, GRUB); `linwp` CLI and `linwp doctor` |
+| **M5** | One-shot `pkexec` helper and its polkit actions (no service units); the base script's three privileged surfaces end-to-end (slick-greeter, lightdm-gtk-greeter, Plymouth via initramfs-tools, GRUB); `linwp` CLI and `linwp doctor` |
 | **M6** | Remaining login providers (GDM, SDDM), dracut back end, fake roots for five distribution shapes, sync mode, collections, slideshows, `.deb` + AppStream, first release |
 | **M7** | Breadth: LXQt/Pantheon/Budgie desktops, per-monitor and Wayland refinements, online scan sources |
 | **M8** | GTK 4 port (flip `gtk_version.py`, replace the FlowBox grid with `Gtk.GridView`) |

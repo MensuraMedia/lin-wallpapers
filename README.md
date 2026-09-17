@@ -5,14 +5,18 @@ Lin Wallpapers finds the images already on your machine, catalogues them into a 
 the one you pick to your **desktop, lock screen, login screen, boot splash and boot menu** — with a preview
 of each screen before anything changes, and one-click undo after.
 
-> **Status: design phase.** This repository currently holds the technical concept, this README and the UI
-> mockups. Application code begins at milestone **M0** ([TECHNICAL-CONCEPT.md §21](TECHNICAL-CONCEPT.md#21-roadmap)).
-> Everything below describes the target of v1.0.
+> **Status: design phase.** This repository holds the technical concept, this README, the base script and
+> the UI mockups. Application code begins at milestone **M0**, now specified in
+> [docs/milestones.md](docs/milestones.md). Everything below describes the target of v1.0.
+>
+> **Lin Wallpapers is not a service.** It is a window you open to change a wallpaper; it writes ordinary OS
+> configuration and exits. No daemon, nothing enabled at boot — the desktop, greeter, Plymouth and GRUB keep
+> displaying the result on their own, even if you uninstall the app.
 
 | | |
 | --- | --- |
 | Platforms | Any Debian-based distribution with GTK 3 — Mint, Ubuntu and its flavours, Debian 12+, Pop!_OS, Zorin, MX, elementary. The desktop, greeter, boot splash and boot manager are **detected, never assumed** |
-| Stack | Python 3.12 · GTK 3 (PyGObject), written to port to GTK 4 · Cairo · GdkPixbuf/Pillow · SQLite · D-Bus + polkit |
+| Stack | Python 3.12 · GTK 3 (PyGObject), written to port to GTK 4 · Cairo · GdkPixbuf/Pillow · SQLite · a one-shot polkit helper |
 | Based on | [gtk-python-dashboard-starter](https://github.com/mikesdatawork/gtk-python-dashboard-starter) (app shell) · [`reference/apply-08-screen-wallpaper.sh`](reference/README.md) (the working base script the apply engine is built around) |
 | Standards | [MensuraMedia/universal-instruction-set](https://github.com/MensuraMedia/universal-instruction-set) v2026.04 |
 | Design reference | `universal-themes/image-reference/ui-kit-yellow-gray-yello.jpg` (dark navy-gray, one yellow accent) |
@@ -75,7 +79,7 @@ undo — and providers that make the same steps work beyond Mint.
 | **Preview** | See the image *as each screen* before applying: desktop with panel and icons, lock screen with clock, login screen with the greeter's fields, boot splash rendered with the real theme geometry, and the boot menu over the quantized image. Optionally run the real splash for 8 seconds on the framebuffer. |
 | **Apply** | To one screen or to all five. You see the exact step list first. Every apply backs up what was there, verifies the result (including that the theme really is inside the new initramfs) and rolls back on failure. |
 | **Undo** | Full history of applies with thumbnails and results; undo restores every file and setting from the backup manifest. |
-| **Sync** | Optional: keep all screens matching the desktop wallpaper automatically, with a clear explanation of the authorization trade-off. |
+| **Sync** | Optional and off by default: keep all screens matching the desktop wallpaper automatically. It is the only part that keeps running — a session autostart entry, not a service — and switching it off leaves every screen as it is. |
 | **Script** | The `linwp` CLI does everything the GUI does, for automation and headless use. |
 
 ## 3. The five screens
@@ -150,8 +154,8 @@ does not replace them. Mapping table: [`reference/README.md`](reference/README.m
 | Lists | `Gtk.FlowBox` with child recycling behind one component (→ `Gtk.GridView` in GTK 4) | Smooth scrolling at 20,000+ cards |
 | Concurrency | Worker threads (`concurrent.futures`) for scan/probe/thumbnail/transform; `GLib.idle_add` back to the UI; `GLib` frame-clock ticks for animation | The UI never blocks on I/O |
 | Storage | **SQLite** (`sqlite3`, WAL) for the catalogue; freedesktop-style thumbnail cache; JSON for plans and backup manifests | One portable file, rebuildable, no server |
-| System access | **D-Bus** via `Gio.DBusProxy` (helper, udisks2, logind); **GSettings**/dconf via `Gio.Settings`; `findmnt`, `xdg-user-dir`, `xrandr`/`Gdk.Monitor` for displays | Standard interfaces, no distro sniffing |
-| Privileged actions | `lin-wallpapersd` on the **system bus**, authorized by **polkit**, started on demand by **systemd** with `ProtectSystem=strict` | The GUI never runs as root |
+| System access | **GSettings**/dconf via `Gio.Settings`; **D-Bus** via `Gio.DBusProxy` for udisks2 and logind; `findmnt`, `xdg-user-dir`, `xrandr`/`Gdk.Monitor` for displays | Standard interfaces, no distro sniffing |
+| Privileged actions | A one-shot helper in `/usr/libexec/`, launched through **`pkexec`** for a single apply and gone when it finishes — no daemon, no service unit, nothing enabled at boot | The GUI never runs as root, and nothing is left running |
 | Boot-facing tools | `plymouth`, `update-alternatives`, `update-initramfs`, `grub-mkconfig`/`update-grub` — called with argument vectors, never a shell | The only way to change splash and menu, done safely |
 | Quality | `ruff`, `mypy`, `pytest` (+ golden-image and fake-root tests), `xvfb-run` UI smoke tests, `shellcheck`, a GTK 4 portability lint | Keeps the modular structure and the port honest |
 | Packaging | `debhelper` + `dh-python` `.deb`, `.desktop`, AppStream metainfo, polkit actions, systemd + D-Bus units | Native install on Debian/Ubuntu/Mint |
@@ -210,8 +214,13 @@ The chrome stays neutral because **the wallpaper is the color**. Mockups: [docs/
 - **Package conffiles are never edited** (`/etc/default/grub`, `lightdm.conf`) — drop-ins only, so package
   upgrades stay silent.
 - **Atomic writes:** temp file in the destination filesystem → `fsync` → `rename`.
-- **The helper** runs only when called, exits after 30 seconds idle, accepts no destination paths, re-hashes
-  and re-renders anything the client sends, calls binaries with argument vectors, and is sandboxed by systemd.
+- **Nothing runs in the background.** Lin Wallpapers is a window, not a service: no daemon, no unit enabled
+  at boot, no tray agent. It writes ordinary OS configuration and gets out of the way — the desktop, greeter,
+  Plymouth and GRUB display the result on their own, and they keep it even if you uninstall the app. The
+  privileged helper runs for the seconds an apply takes (via `pkexec`) and exits; the only long-running piece
+  is sync mode, which is opt-in, off by default, and a session autostart entry you can switch off.
+- **The helper** accepts no destination paths, re-hashes and re-renders anything the GUI sends, calls
+  binaries with argument vectors and never a shell, and authorizes once per apply through polkit.
 - **Boot escape hatch:** if a splash ever misbehaves, remove `splash` from the kernel line in the GRUB menu
   for one boot, then `linwp undo`.
 
@@ -221,7 +230,7 @@ The chrome stays neutral because **the wallpaper is the color**. Mockups: [docs/
 
 ```bash
 sudo apt install ./lin-wallpapers_<version>_all.deb ./lin-wallpapers-helper_<version>_all.deb
-lin-wallpapers
+lin-wallpapers        # nothing is enabled or started at install time
 ```
 
 ## 10. Command line
@@ -271,7 +280,7 @@ lin-wallpapers/
 ├── src/             # main.py · gtk_version.py · config · ui · pages · viewmodels
 │                    # scanner · catalogue · imaging · preview · apply(+providers) · helper · sync · cli · util
 ├── resources/       # css · icons · fonts · plymouth-template
-├── data/            # .desktop · AppStream · polkit actions · D-Bus + systemd units
+├── data/            # .desktop · AppStream · polkit actions (no service units)
 ├── tests/           # unit · golden images · fakeroot
 └── debian/          # packaging
 ```
@@ -295,6 +304,7 @@ lin-wallpapers/
 | Document | Contents |
 | --- | --- |
 | [TECHNICAL-CONCEPT.md](TECHNICAL-CONCEPT.md) | Architecture, the five surfaces, scanning, scoring, catalogue schema, previews, transforms, the apply transaction, the helper and its security model, UI concept, design tokens, modularity, GTK 4 rules, packaging, testing, roadmap, risks |
+| [docs/milestones.md](docs/milestones.md) | Delivery plan M0–M8, with **M0 (Foundation)** broken down into tasks, acceptance criteria and risks |
 | [reference/README.md](reference/README.md) | The base script: what each step does and which module it becomes; the rules the app inherits from it |
 | [docs/mockups/](docs/mockups/) | UI mockups of the main screens, with rendered screenshots in `docs/mockups/png/` and the renderer that produces them |
 
