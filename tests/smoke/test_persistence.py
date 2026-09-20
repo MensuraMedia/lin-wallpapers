@@ -42,7 +42,8 @@ def _run(config_home: Path, *args: str) -> dict[str, tuple[str, int, int]]:
 @pytest.mark.parametrize("door", ["close", "quit"])
 def test_state_is_saved_on_the_way_out(tmp_path: Path, door: str) -> None:
     first = _run(tmp_path, door, "history", "1100", "700")
-    assert first["restored"][0] == "browse"  # a fresh config: the default route
+    # Fresh config + empty catalogue: first run lands on the Sources scan hero (M1 acceptance #4).
+    assert first["restored"][0] == "sources"
     assert first["leaving"][0] == "history"
 
     second = _run(tmp_path, "quit" if door == "close" else "close", "sources", "1000", "680")

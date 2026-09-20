@@ -14,6 +14,12 @@ import sys
 if os.environ.get("GSETTINGS_BACKEND") != "keyfile" or not os.environ.get("XDG_CONFIG_HOME"):
     sys.exit("drive_persist: needs GSETTINGS_BACKEND=keyfile and a temporary XDG_CONFIG_HOME")
 
+# Keep the catalogue under the (shared, per-test) config home so it is isolated from the user's real data
+# yet stable across this test's successive runs: the first run marks ``first_run_done``, so later runs
+# honour the remembered route rather than re-applying the first-run landing.
+os.environ.setdefault("XDG_DATA_HOME", os.environ["XDG_CONFIG_HOME"] + "/data")
+os.environ.setdefault("XDG_CACHE_HOME", os.environ["XDG_CONFIG_HOME"] + "/cache")
+
 from src.gtk_version import Gio, GLib
 from src.main import LinWallpapersApp
 

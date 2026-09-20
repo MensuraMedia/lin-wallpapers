@@ -6,9 +6,11 @@ version-gated anywhere but ``src/gtk_version.py``.
 
 The API bans go by *name* (``.add()``, ``.get_size()``, ``.resize()`` …), so they apply only to
 modules that can hold a widget: the widget layers (``src/ui``, ``src/pages``, ``src/modules``,
-``src/viewmodels``, ``src/main.py``) and any file that imports ``gi``, ``src.gtk_version`` or
-``src.ui``. The service layers get the import/gate checks only — ``set.add()`` and PIL's
-``Image.resize()`` are not GTK, and import-linter already keeps GTK out of those layers.
+``src/main.py``) and any file that imports ``gi``, ``src.gtk_version`` or ``src.ui``. The service
+layers get the import/gate checks only — ``set.add()`` and PIL's ``Image.resize()`` are not GTK, and
+import-linter already keeps GTK out of those layers. ``src/viewmodels`` is gi-free by contract (only
+``gdk_displays.py`` imports the GTK gate, and that file is still caught by the import rule above), so
+the view models are treated as a service layer — a plain ``selection.add()`` there is not a widget call.
 A line can still opt out with ``# gtk4-lint: ok`` and a reason.
 
     python3 tools/gtk4_lint.py [paths...]
@@ -56,7 +58,7 @@ BANNED_PREFIXES = {
 }
 CONNECT_METHODS = {"connect", "connect_after", "connect_object", "connect_object_after"}
 GTK_MODULES = ("gi", "src.gtk_version", "src.ui")
-WIDGET_LAYERS = tuple(ROOT / "src" / layer for layer in ("ui", "pages", "modules", "viewmodels"))
+WIDGET_LAYERS = tuple(ROOT / "src" / layer for layer in ("ui", "pages", "modules"))
 WIDGET_FILES = (ROOT / "src" / "main.py",)
 
 # attribute chains that must not appear

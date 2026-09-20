@@ -17,10 +17,12 @@ is ``0700`` (the cache lists the user's private image collection by content hash
 
 from __future__ import annotations
 
+import contextlib
 import io
 import logging
 import os
 import shutil
+import tempfile
 import time
 from enum import IntEnum
 from pathlib import Path
@@ -209,22 +211,46 @@ class ThumbCache:
             os.utime(path, (now, now))
 
     def _write_atomic(self, image: Image.Image, path: Path) -> None:
+        """Write JPEG bytes to a uniquely-named ``*.tmp`` file in ``path``'s directory, then atomically
+        move it into place with ``os.replace``.
+
+        The temp name is unique per call (``tempfile.mkstemp``), not just per key: two probe threads can
+        legitimately race to store the *same* content key (duplicate files — the walker only dedups by
+        ``(device, inode)``, never by content) and must not share one temp file, or the loser's
+        ``os.replace`` fails with ``FileNotFoundError`` against a path the winner already moved away, and
+        worse, two different files that happen to collide on the same key could interleave their writes
+        into one shared temp file and corrupt it. With a private temp file per writer neither can happen.
+        If our own write or replace still fails for some other reason but ``path`` now exists, a concurrent
+        writer for the same key beat us to a valid thumbnail — that is success (``store()``'s documented
+        no-op for an existing key), not a failure.
+        """
         self._ensure_private_dir(path.parent)
-        tmp = path.with_name(path.name + ".tmp")
+        fd, tmp_name = tempfile.mkstemp(prefix=f"{path.name}.", suffix=".tmp", dir=path.parent)
+        tmp = Path(tmp_name)  # mkstemp already creates it mode 0600 — private, no further chmod needed
         try:
-            image.save(tmp, format="JPEG", quality=85)
-            tmp.replace(path)
+            with os.fdopen(fd, "wb") as handle:
+                image.save(handle, format="JPEG", quality=85)
+            tmp.replace(path)  # Path.replace() is os.replace() underneath — same atomic rename
         except BaseException:
             tmp.unlink(missing_ok=True)
+            if path.exists():
+                return
             raise
 
     def _ensure_private_dir(self, path: Path) -> None:
         """``mkdir -p`` with every newly created level ``0700`` (``Path.mkdir(parents=True, mode=...)``
-        leaves intermediate directories at the default mode, which is not private enough here)."""
+        leaves intermediate directories at the default mode, which is not private enough here).
+
+        Race-safe: a scan's probe threads routinely reach a brand-new shard directory (``key[:2]``) at the
+        same time. The existence check is TOCTOU by nature, so a concurrent creator can win the ``mkdir``
+        between our check and our call — that creator runs this same 0700 code, so the directory is still
+        correctly private; we just swallow the resulting ``FileExistsError`` instead of failing the store.
+        """
         missing: list[Path] = []
         current = path
         while not current.exists():
             missing.append(current)
             current = current.parent
         for directory in reversed(missing):
-            directory.mkdir(mode=0o700)
+            with contextlib.suppress(FileExistsError):
+                directory.mkdir(mode=0o700)

@@ -9,10 +9,14 @@ from __future__ import annotations
 import argparse
 import json
 import sys
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
 from enum import IntEnum
+from typing import TYPE_CHECKING
 
 from src import __version__
+
+if TYPE_CHECKING:
+    from src.cli.context import Context
 
 
 class ExitCode(IntEnum):
@@ -81,7 +85,8 @@ def build_parser() -> argparse.ArgumentParser:
     scan.add_argument("--add", metavar="PATH", help="add a root and scan it")
     scan.add_argument("--display", metavar="WxH[,WxH...]", help="also judge for an unconnected display")
 
-    add("displays")
+    displays = add("displays")
+    displays.add_argument("--display", metavar="WxH[,WxH...]", help="also report a declared display")
 
     exclude = add("exclude")
     exclude.add_argument("action", choices=["add", "remove", "list", "test", "group"])
@@ -128,6 +133,32 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _dispatch_table() -> dict[str, Callable[[argparse.Namespace, Context], int]]:
+    """The M1 subcommands, imported lazily so ``linwp --help`` stays import-cheap and gi-free."""
+    from src.cli import cmd_displays, cmd_exclude, cmd_list, cmd_scan, cmd_show
+
+    return {
+        "scan": cmd_scan.run,
+        "list": cmd_list.run,
+        "show": cmd_show.run,
+        "displays": cmd_displays.run,
+        "exclude": cmd_exclude.run,
+    }
+
+
+def _not_implemented(command: str, as_json: bool) -> int:
+    milestone = COMMANDS[command][0]
+    if as_json:
+        print(
+            json.dumps(
+                {"ok": False, "error": "not_implemented", "command": command, "milestone": milestone}
+            )
+        )
+    else:
+        print(f"linwp {command}: not implemented yet — arrives in {milestone}", file=sys.stderr)
+    return ExitCode.NOT_IMPLEMENTED
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -135,17 +166,27 @@ def main(argv: Sequence[str] | None = None) -> int:
         parser.print_help()
         return ExitCode.USAGE
 
-    milestone = COMMANDS[args.command][0]
-    message = f"linwp {args.command}: not implemented yet — arrives in {milestone}"
-    if args.json:
-        print(
-            json.dumps(
-                {"ok": False, "error": "not_implemented", "command": args.command, "milestone": milestone}
-            )
-        )
-    else:
-        print(message, file=sys.stderr)
-    return ExitCode.NOT_IMPLEMENTED
+    handlers = _dispatch_table()
+    handler = handlers.get(args.command)
+    if handler is None:
+        return _not_implemented(args.command, args.json)
+
+    from src.catalogue.db import CatalogueError
+    from src.cli import context
+    from src.util import threads
+
+    ctx = context.open_context()
+    try:
+        return handler(args, ctx)
+    except CatalogueError as error:
+        if args.json:
+            print(json.dumps({"ok": False, "error": type(error).__name__, "detail": str(error)}))
+        else:
+            print(f"linwp {args.command}: {error}", file=sys.stderr)
+        return ExitCode.ERROR
+    finally:
+        ctx.close()
+        threads.shutdown()
 
 
 if __name__ == "__main__":

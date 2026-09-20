@@ -10,16 +10,21 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from src.gtk_version import IS_GTK4, Gdk, Gtk
+from gi.repository import GdkPixbuf
+
+from src.gtk_version import IS_GTK4, Gdk, GLib, Gtk
 
 __all__ = [
     "CanvasArea",
     "add_class",
     "add_css_provider",
     "append",
+    "children",
+    "clear_children",
     "click_gesture",
     "foreground_color",
     "icon",
+    "image_from_bytes",
     "lookup_color",
     "on_close_request",
     "remove_class",
@@ -102,6 +107,58 @@ def set_tracked_text(label: Any, text: str) -> None:
         label.update_property([Gtk.AccessibleProperty.LABEL], [text])
     else:
         label.get_accessible().set_name(text)
+
+
+def children(container: Any) -> list[Any]:
+    """Every direct child of a container, oldest first — the portable ``get_children``."""
+    if IS_GTK4:
+        out: list[Any] = []
+        child = container.get_first_child()
+        while child is not None:
+            out.append(child)
+            child = child.get_next_sibling()
+        return out
+    return list(container.get_children())
+
+
+def clear_children(container: Any) -> None:
+    """Remove every child from a box-like container (for a grid or list that rebuilds in place)."""
+    for child in children(container):
+        container.remove(child)
+
+
+def image_from_bytes(data: bytes, width: int, height: int) -> Any:
+    """A widget showing raw image ``data`` (JPEG/PNG bytes from a view model), scaled to fit
+    ``width`` × ``height`` preserving aspect. Returns ``None`` when the bytes will not decode.
+
+    A ``GdkPixbuf`` in GTK 3, a ``Gdk.Texture`` behind a ``Gtk.Picture`` in GTK 4 — the one place
+    the bytes→widget branch lives, so components stay version-independent.
+    """
+    if IS_GTK4:
+        try:
+            texture = Gdk.Texture.new_from_bytes(GLib.Bytes.new(data))
+        except GLib.Error:
+            return None
+        picture = Gtk.Picture.new_for_paintable(texture)
+        picture.set_size_request(width, height)
+        picture.set_content_fit(Gtk.ContentFit.COVER)
+        return picture
+    loader = GdkPixbuf.PixbufLoader()
+    try:
+        loader.write(data)
+        loader.close()
+    except GLib.Error:
+        return None
+    pixbuf = loader.get_pixbuf()
+    if pixbuf is None:
+        return None
+    source_width, source_height = pixbuf.get_width(), pixbuf.get_height()
+    if source_width <= 0 or source_height <= 0:
+        return None
+    scale = min(width / source_width, height / source_height)
+    target = (max(1, round(source_width * scale)), max(1, round(source_height * scale)))
+    scaled = pixbuf.scale_simple(target[0], target[1], GdkPixbuf.InterpType.BILINEAR)
+    return Gtk.Image.new_from_pixbuf(scaled)
 
 
 def icon(name: str, pixel_size: int = 16) -> Any:

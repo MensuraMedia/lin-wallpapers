@@ -5,6 +5,7 @@ from __future__ import annotations
 import io
 import os
 import stat
+import threading
 import time
 from pathlib import Path
 
@@ -161,16 +162,37 @@ def test_atomic_write_leaves_no_tmp_file_after_a_simulated_failure(
     key = _key(10)
     source = make_jpeg(tmp_path, "s.jpg", size=(50, 40))
 
-    def boom(self: Path, _target: Path) -> Path:
+    def boom(_src: str | os.PathLike[str], _dst: str | os.PathLike[str]) -> None:
         raise OSError("simulated failure mid-write")
 
-    monkeypatch.setattr(Path, "replace", boom)
+    monkeypatch.setattr(os, "replace", boom)
     with Image.open(source) as image:
         result = cache.store(image, key, CancelToken())
     assert result == "failed"
     target = cache.path_for(key, ThumbSize.NORMAL)
     assert not target.exists()
-    assert not target.with_name(target.name + ".tmp").exists()
+    assert list(target.parent.glob("*.tmp")) == []
+
+
+def test_write_atomic_treats_a_late_arriving_target_as_success(
+    cache: ThumbCache, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """If our own replace fails but the target now exists — a concurrent writer for the same key finished
+    first, after ``store()``'s initial existence check but before ours — that is success, not 'failed'."""
+    key = _key(230)
+    target = cache.path_for(key, ThumbSize.NORMAL)
+    target.parent.mkdir(parents=True, mode=0o700)
+    winner_bytes = b"written by the concurrent winner"
+
+    def boom(_src: str | os.PathLike[str], _dst: str | os.PathLike[str]) -> None:
+        target.write_bytes(winner_bytes)  # the other writer finishes between our write and our replace
+        raise OSError("simulated replace failure after a concurrent writer already finished")
+
+    monkeypatch.setattr(os, "replace", boom)
+    image = Image.new("RGB", (10, 10), (1, 2, 3))
+    cache._write_atomic(image, target)  # must not raise
+    assert target.read_bytes() == winner_bytes  # the winner's bytes were left untouched
+    assert list(target.parent.glob("*.tmp")) == []
 
 
 def test_store_creates_directories_with_private_permissions(cache: ThumbCache, tmp_path: Path) -> None:
@@ -181,6 +203,83 @@ def test_store_creates_directories_with_private_permissions(cache: ThumbCache, t
     target = cache.path_for(key, ThumbSize.NORMAL)
     for directory in (target.parent, target.parent.parent, target.parent.parent.parent):
         assert stat.S_IMODE(directory.stat().st_mode) == 0o700
+
+
+def test_store_is_race_safe_when_many_threads_share_a_new_shard_directory(tmp_path: Path) -> None:
+    """A scan-private pool of probe threads (M1 contract §3) calls ``store()`` concurrently and routinely
+    lands on the same brand-new shard directory (``key[:2]``) at once. Directory creation is TOCTOU by
+    nature (``_ensure_private_dir``), so a losing thread's ``mkdir`` must not surface as ``'failed'``."""
+    base = tmp_path / "thumbs"
+    cache = ThumbCache(base=base)
+    assert not base.exists()  # nothing pre-created: every worker races to make base/normal/<shard>
+
+    worker_count = 16
+    keys = [_key(200 + i) for i in range(worker_count)]
+    assert len({key[:2] for key in keys}) == 1  # _key()'s zero-padding: they all share shard "00"
+
+    sources = [make_jpeg(tmp_path, f"race{i}.jpg", size=(60, 40), seed=i) for i in range(worker_count)]
+    results: list[str] = [""] * worker_count
+    barrier = threading.Barrier(worker_count)
+
+    def worker(index: int) -> None:
+        with Image.open(sources[index]) as image:
+            image.load()
+            barrier.wait()  # line every thread up so the mkdir race is as tight as possible
+            results[index] = cache.store(image, keys[index], CancelToken())
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(worker_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert results == ["ok"] * worker_count  # none lost the mkdir race as a 'failed' store
+
+    shard_dir = cache.path_for(keys[0], ThumbSize.NORMAL).parent
+    for directory in (base, base / "normal", shard_dir):
+        assert stat.S_IMODE(directory.stat().st_mode) == 0o700  # whichever thread won is still private
+    for key in keys:
+        assert cache.read(key) is not None
+
+
+def test_store_is_race_safe_when_many_threads_share_the_same_content_key(tmp_path: Path) -> None:
+    """Two files with identical ``content_key()`` (duplicate content — the walker only dedups by
+    ``(device, inode)``, never by content) can be probed concurrently and both call ``store()`` with the
+    same key. They must not share one ``*.tmp`` file: the loser of a shared name would see its own
+    ``os.replace`` raise ``FileNotFoundError`` against a path the winner already moved away, and the
+    resulting 'failed' would be persisted forever as ``image.thumb_status`` for a thumbnail that in fact
+    exists. Concurrent, interleaved writes into one shared temp file could also corrupt it outright."""
+    base = tmp_path / "thumbs"
+    cache = ThumbCache(base=base)
+    key = _key(210)
+    source = make_jpeg(tmp_path, "shared.jpg", size=(220, 160), seed=5)
+
+    worker_count = 8
+    results: list[str] = [""] * worker_count
+    barrier = threading.Barrier(worker_count)
+
+    def worker(index: int) -> None:
+        with Image.open(source) as image:
+            image.load()
+            barrier.wait()  # line every thread up so the tmp-file race is as tight as possible
+            results[index] = cache.store(image, key, CancelToken())
+
+    threads = [threading.Thread(target=worker, args=(i,)) for i in range(worker_count)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert results == ["ok"] * worker_count  # none lost the tmp race as a 'failed' store
+
+    target = cache.path_for(key, ThumbSize.NORMAL)
+    assert target.exists()
+    data = cache.read(key)
+    assert data is not None
+    with Image.open(io.BytesIO(data)) as out:  # the final file is a valid, undamaged JPEG
+        out.load()
+        assert out.size[0] > 0 and out.size[1] > 0
+    assert list(target.parent.glob("*.tmp")) == []  # no writer's temp file was left behind
 
 
 # ── no upscaling ─────────────────────────────────────────────────────────────────────────────────────────

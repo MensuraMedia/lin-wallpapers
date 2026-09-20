@@ -5,14 +5,17 @@ from __future__ import annotations
 from typing import Any
 
 from src.gtk_version import Gtk
-from src.pages import ALL_PAGES
+from src.pages import ALL_PAGES, PageContext, make_page
 from src.ui import compat
 
 
 class ContentArea(Gtk.Box):  # type: ignore[misc]
-    def __init__(self, navigation_manager: Any) -> None:
+    def __init__(self, navigation_manager: Any, context: PageContext | None = None) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self.nav_manager = navigation_manager
+        # The window builds ContentArea with no context (contract: it never imports a view model), so pull
+        # the injected one off the running application; None in a bare shell falls back to empty pages.
+        self.context = context if context is not None else _app_context()
         compat.add_class(self, "content-area")
 
         self.stack = Gtk.Stack()
@@ -24,7 +27,7 @@ class ContentArea(Gtk.Box):  # type: ignore[misc]
 
     def register_pages(self) -> None:
         for page_class in ALL_PAGES:
-            page = page_class()
+            page = make_page(page_class, self.context)
             scrolled = Gtk.ScrolledWindow()
             scrolled.set_policy(Gtk.PolicyType.AUTOMATIC, Gtk.PolicyType.AUTOMATIC)
             compat.set_child(scrolled, page)
@@ -33,3 +36,9 @@ class ContentArea(Gtk.Box):  # type: ignore[misc]
 
     def show_page(self, route: str) -> bool:
         return bool(self.nav_manager.navigate_to(route))
+
+
+def _app_context() -> PageContext | None:
+    """The :class:`PageContext` the application stored on itself in ``do_activate`` (see ``src/main.py``)."""
+    app = Gtk.Application.get_default()
+    return getattr(app, "page_context", None) if app is not None else None

@@ -126,12 +126,19 @@ def test_name_bans_apply_wherever_gtk_is_imported(tmp_path: Path) -> None:
 
 def test_name_bans_apply_to_the_widget_layers_whatever_they_import() -> None:
     plain = gtk4_lint.ast.parse("x = 1")
-    for relative in ("ui/x.py", "pages/x.py", "modules/x.py", "viewmodels/x.py", "main.py"):
+    for relative in ("ui/x.py", "pages/x.py", "modules/x.py", "main.py"):
         assert gtk4_lint._can_hold_widgets(PROJECT_ROOT / "src" / relative, plain), relative
-    for layer in ("scanner", "catalogue", "imaging", "apply", "helper", "cli", "util", "config"):
+    # ``viewmodels`` is gi-free by contract, so it is a service layer here: a plain view model is not
+    # widget-checked (``selection.add()`` is a set method), but ``gdk_displays`` imports the GTK gate and is.
+    service_layers = (
+        "scanner", "catalogue", "imaging", "apply", "helper", "cli", "util", "config", "viewmodels",
+    )
+    for layer in service_layers:
         relative = f"src/{layer}/x.py"
         assert not gtk4_lint._can_hold_widgets(PROJECT_ROOT / relative, gtk4_lint.ast.parse("x = 1"))
         assert gtk4_lint._can_hold_widgets(PROJECT_ROOT / relative, gtk4_lint.ast.parse("import gi"))
+    gate = gtk4_lint.ast.parse("from src.gtk_version import Gdk")
+    assert gtk4_lint._can_hold_widgets(PROJECT_ROOT / "src/viewmodels/gdk_displays.py", gate)
 
 
 def test_allowed_signals_and_names_pass(tmp_path: Path) -> None:

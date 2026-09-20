@@ -542,6 +542,71 @@ def test_cancel_while_blocked_on_a_full_queue_unblocks_promptly(tmp_path: Path) 
     assert results[0].complete is False
 
 
+def test_complete_walk_delivers_the_sentinel_through_a_full_undrained_queue(tmp_path: Path) -> None:
+    """Regression: on a *completed*, uncancelled walk the end-of-walk ``None`` sentinel must be delivered
+    reliably. A queue that is still full at that instant is ordinary back-pressure — probing slower than
+    walking is the normal case for any real library — not a reason to drop the only signal that tells
+    every probe worker to stop polling; dropping it hangs every worker forever (``get(timeout=0.2)``
+    spins on a token that never arrives) and ``walk()``'s caller never gets its threads back (§3).
+
+    ``maxsize=1`` with exactly one candidate makes this deterministic rather than a timing race: the
+    walker's one blocking ``_put`` for that candidate succeeds immediately (the queue starts empty), so by
+    the time it reaches the end-of-walk sentinel the queue is *already* full and stays that way — nothing
+    else is draining it — until the consumer, held back for a beat, takes that first item.
+    """
+    (tmp_path / "only.jpg").write_bytes(b"x" * 100)
+
+    out: queue.Queue[Candidate | None] = queue.Queue(maxsize=1)
+    cancel = CancelToken()
+    results: list[WalkResult] = []
+    received: list[Candidate | None] = []
+    consumer_saw_sentinel = threading.Event()
+
+    def run_walk() -> None:
+        results.append(
+            walk(
+                str(tmp_path),
+                _matcher(),
+                FakeKnown(),
+                out,
+                RecordingListener(),
+                cancel,
+                WalkOptions(min_file_bytes=0),
+                CountingFs(),
+            )
+        )
+
+    def drain_late() -> None:
+        time.sleep(0.5)  # the walker's `_put`/`_finish` calls have long since returned or blocked by now
+        for _ in range(2):  # the one candidate, then the sentinel
+            try:
+                item = out.get(timeout=5.0)
+            except queue.Empty:
+                return  # exactly the pre-fix failure: the sentinel was dropped and never arrives
+            received.append(item)
+            if item is None:
+                consumer_saw_sentinel.set()
+                return
+
+    walker_thread = threading.Thread(target=run_walk)
+    consumer_thread = threading.Thread(target=drain_late)
+    walker_thread.start()
+    consumer_thread.start()
+
+    walker_thread.join(timeout=10.0)
+    delivered = consumer_saw_sentinel.wait(timeout=10.0)
+    consumer_thread.join(timeout=1.0)
+
+    assert not walker_thread.is_alive(), "walk() must return once the sentinel has actually been delivered"
+    assert delivered, "the consumer never received the end-of-walk sentinel: every probe worker would hang"
+    assert not consumer_thread.is_alive()
+    assert len(results) == 1
+    assert results[0].complete is True
+    assert len(received) == 2
+    assert received[0] is not None and received[0].path == str(tmp_path / "only.jpg")
+    assert received[1] is None
+
+
 def test_cancel_before_starting_returns_immediately(tmp_path: Path) -> None:
     (tmp_path / "a.jpg").write_bytes(b"x" * 100)
     cancel = CancelToken()

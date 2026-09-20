@@ -189,11 +189,24 @@ def _put(out: queue.Queue[Candidate | None], item: Candidate | None, cancel: Can
 
 
 def _send_end(out: queue.Queue[Candidate | None]) -> None:
-    """Best-effort delivery of the end-of-walk sentinel. Unlike a candidate, this is never worth blocking
-    on: once cancelled, a consumer draining the queue already knows to stop from ``cancel`` itself, and a
-    still-full, undrained queue is its problem, not this call's to wait out."""
+    """Best-effort delivery of the end-of-walk sentinel, for a *cancelled* walk only: a probe worker may
+    never drain the queue again (D3/§3 — cancelled queues drain without probing, then stop), so blocking
+    here could deadlock instead of returning promptly."""
     with contextlib.suppress(queue.Full):
         out.put_nowait(None)
+
+
+def _finish(out: queue.Queue[Candidate | None], cancel: CancelToken, *, complete: bool) -> None:
+    """Deliver the end-of-walk sentinel. A *complete*, uncancelled walk delivers it reliably, the same
+    0.2 s-timeout loop a candidate uses: a full queue at that instant is ordinary back-pressure (probing
+    slower than walking is the normal case for any real library), not a reason to drop the only signal
+    that tells every probe worker to stop polling — dropping it here would hang them forever (§3: no
+    thread outlives the window). A cancelled walk uses the best-effort path instead, since a worker may
+    have already stopped draining."""
+    if complete:
+        _put(out, None, cancel)
+    else:
+        _send_end(out)
 
 
 class _Walker:
@@ -238,7 +251,7 @@ class _Walker:
             self._visit(stack.pop(), stack)
             if not self.complete:
                 break
-        _send_end(self.out)  # end of walk
+        _finish(self.out, self.cancel, complete=self.complete)
         return WalkResult(self.complete, tuple(self.failed_dirs))
 
     def _visit(self, dir_path: str, stack: list[str]) -> None:
@@ -418,11 +431,11 @@ def walk(
     except OSError as exc:
         kind = IssueKind.PERMISSION_DENIED if isinstance(exc, PermissionError) else IssueKind.IO_ERROR
         listener.on_issue(ScanIssue(kind, root, _detail(exc)))
-        _send_end(out)
+        _finish(out, cancel, complete=not cancel.cancelled)
         return WalkResult(not cancel.cancelled, (root,))
     if not stat.S_ISDIR(root_stat.st_mode):
         listener.on_issue(ScanIssue(IssueKind.NOT_REGULAR, root, "root is not a directory"))
-        _send_end(out)
+        _finish(out, cancel, complete=not cancel.cancelled)
         return WalkResult(not cancel.cancelled, (root,))
 
     walker = _Walker(

@@ -12,11 +12,18 @@ from __future__ import annotations
 import json
 import os
 import sys
+import tempfile
 from collections.abc import Iterator
 from typing import Any
 
 # Never read or write the user's real settings from a test run: must be set before Gio starts.
 os.environ["GSETTINGS_BACKEND"] = "memory"
+# Nor the real catalogue/thumbnails: an isolated, empty XDG home keeps the shell smoke hermetic — the
+# app opens a fresh catalogue and, with no roots, scans nothing (M1 acceptance #1).
+if "XDG_DATA_HOME" not in os.environ:
+    _tmp = tempfile.mkdtemp(prefix="lwp-smoke-")
+    os.environ["XDG_DATA_HOME"] = _tmp + "/data"
+    os.environ["XDG_CACHE_HOME"] = _tmp + "/cache"
 
 from src.config.config_layout import Layout
 from src.gtk_version import Gdk, Gio, GLib, Gtk
