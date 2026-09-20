@@ -1,21 +1,31 @@
 # Pending
 
-Next actions, most important first. Keep short; move done items into the changelog.
+> **2026-09-20 (evening): the user assessed the project as FAILED ("not effective. this project has
+> failed.").** See `docs/STATUS.md` → "Current assessment". Do not resume feature work as if the gate
+> being green means the app works — it repeatedly did not. What follows is the honest open list.
 
-## Done (this run)
-- P4.1, P5a (roots/walker/probe/thumbs), **P5b (ingest + CLI)**, **P6-I (view models)**, **P6-J (Sources/Browse GUI)** — all closed, adversary-gated. The app scans, remembers, and is clickable (Scan button, scan-at-open, results grid); CLI has parity.
+## Broken / unresolved (user-facing)
+- **Exclusions don't show in Sources → Exclusions.** Excluding from Browse removes the card but the rule
+  never appears in the Sources panel. Root cause: `SourcesVM` never subscribed to the `ChangeFeed`. A fix
+  was attempted (subscribe + refresh); **user reports it is still not effective** — re-verify live, not by
+  tests.
+- **Add to Collection / Preview** context-menu items do nothing (Collections = M6, Preview = M3, unbuilt);
+  they were also styled to look enabled (styling fix in flight).
 
-## Next phase
-- **P7 — performance + acceptance** (the last M1 phase):
-  - 10k-image fixture generator (a script, not committed), built on `tests/helpers/imagegen.py`.
-  - Benchmarks in `docs/perf.md` vs concept §20 budgets: ≥300 files/s phase 1, ≥60 probes/s phase 2, 60 fps at 20k cards, thumb-from-cache <5 ms, <250 MB RSS. Add a `perf` marker to `pyproject.toml` (team-lead file), excluded from `make check` unless `PERF=1`.
-  - Promote the cancel / `kill -9` convergence and nasty-file corpus to an M1 acceptance run; verify acceptance criteria 1–10.
+## The fundamental gap
+- The app **cannot set a wallpaper** — the entire apply path (preview M3, apply M4, privileged helper M5)
+  is unbuilt. Everything shipped so far is scan + catalogue + browse + exclude. The product does not yet do
+  the one thing it exists to do.
 
-## Follow-ups / smaller items
-- Runtime window-icon from source (`set_default_icon_name`/resource) — optional; the installed `.desktop` + hicolor icon already give the menu/taskbar icon.
-- Capture a screenshot of the user's real 43-image library in Browse (the committed screenshots use the smoke fixture).
-- Full distribution packaging (deb/rpm/flatpak) — a later milestone; `install.sh` is desktop integration only.
+## Process failure to fix before continuing
+- Features were called "done" on green unit/smoke tests that bypassed the real user interaction (the
+  right-click was broken for days while tests passed; exclusions-in-Sources passed tests but failed live).
+  Any future work must verify user-facing behaviour by real input driving (`Gtk.main_do_event`) or a human
+  in the loop — the gate is necessary but NOT sufficient.
 
-## Deferred / out of scope (recorded)
-- Per-virtual-desktop wallpapers: feasibility only — `docs/design/virtual-desktop-wallpapers.md` (daemon-free only on Xfce + KDE Activities; Q1–Q5 need product/team answers).
-- No system tray / no autostart — architectural (no background process).
+## If work resumes (smallest → largest)
+- Re-verify/fix the exclusions-in-Sources bug **in the running app**.
+- Fix the disabled-menu-item styling so unbuilt actions read as unavailable.
+- P7 to formally close M1 (perf + acceptance).
+- Then the real product work: M2 scoring, M3 preview + Screens, M4/M5 apply — that is where a "wallpaper
+  manager" actually begins.

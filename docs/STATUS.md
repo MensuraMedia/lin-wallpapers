@@ -13,10 +13,31 @@ doesn't / what's left" snapshot._
 | 📝 **Documented / mocked only** | Specified and/or mocked up. **No implementation.** |
 | ⬜ **Not started** | — |
 
-> **Honest headline:** the app is a working *catalogue browser* (it scans your folders, remembers
-> them, and shows a filterable grid of your wallpapers). It **cannot set a wallpaper yet** — the
-> apply engine does not exist. The Browse right-click **Exclude** actions are coded and unit/smoke
-> tested but are **not confirmed working with a real right-click** (see the ⚠️ note below).
+> **Honest headline:** the app is a *catalogue browser* — it scans folders, remembers them, and shows a
+> filterable grid. It **cannot set a wallpaper at all** (the apply engine, M3–M5, does not exist), which
+> is the whole point of the product. See the assessment immediately below.
+
+## ⛔ Current assessment — 2026-09-20 (evening): user marked the project **FAILED**
+
+Recorded verbatim so the next maintainer doesn't inherit false confidence:
+
+- **The user's verdict:** *"not effective. this project has failed."* After the right-click work, the user
+  reported the follow-on fixes were not effective. Take this as the ground truth over any "green gate" claim.
+- **The core function does not exist.** Lin's purpose is to *set a wallpaper across screens*. None of that
+  is built — no preview compositor (M3), no apply engine (M4), no privileged helper (M5). Today the app can
+  only *catalogue and browse*. It has never applied a wallpaper.
+- **Recurring, serious process failure — "green tests, broken in the app."** Multiple features were reported
+  as working on the strength of tests that exercised the layer *beneath* the real interaction:
+  - The Browse **right-click** passed unit + smoke tests for days while doing nothing on a real click (two
+    real bugs: a garbage-collected gesture and a windowless card). It took several rounds and two wrong
+    root-cause diagnoses to fix. It now opens on a real event (user-confirmed).
+  - **Exclusions** remove the card from Browse (works) but do **not** appear in Sources → Exclusions (a
+    stale-`SourcesVM` bug). A fix was attempted; per the user it is still not effective — treat as **open**.
+  - **Add to Collection / Preview** context-menu items are non-functional placeholders (Collections = M6,
+    Preview = M3, unbuilt) and were styled to look enabled.
+- **Lesson for whoever continues this:** do not trust `make check` as evidence a *GUI interaction* works. A
+  test that calls the handler directly proves nothing about a real click. Verify user-facing behaviour by
+  driving real input (`Gtk.main_do_event`) or by a human using the app — and prefer the human.
 
 ---
 
@@ -134,8 +155,14 @@ make check                    # full gate: shellcheck, ruff, mypy, gtk4_lint, im
   `virtual-desktop-wallpapers.md`.
 
 ## Open items (priority order)
-1. ✅ **Done (2026-09-20):** the Browse right-click now works — fixed the gesture-GC and windowless-card
-   bugs, proven via `Gtk.main_do_event`. A live right-click by the user is the final confirmation.
-2. Close **M1** with **P7** (perf + acceptance).
-3. Decide whether to pull **Collections** (M6.7) forward as the next buildable menu item.
-4. Wire the disabled **Add to Collection / Preview** context-menu items once M6 / M3 land.
+1. **OPEN — exclusions don't reach Sources → Exclusions.** Excluding from Browse removes the card but the
+   rule doesn't appear in the Sources panel (stale `SourcesVM` — it never subscribed to the change feed). A
+   fix was attempted; **the user reports it is still not effective.** Needs live re-verification, not tests.
+2. **The product's reason to exist is unbuilt:** setting a wallpaper (preview M3, apply M4, privileged M5).
+   Until that exists the app is a browser, not a wallpaper manager.
+3. Right-click **Add to Collection / Preview** are dead placeholders; disabled styling was misleading (fix
+   in flight). Making them real means building Collections (M6) and Preview (M3).
+4. Close **M1** with **P7** (perf + acceptance) — the smallest remaining formal milestone.
+
+> If this project continues, the first move should be to stop trusting the gate as proof of GUI behaviour and
+> put a human (or real-input driving) in the loop for every user-facing feature before it is called done.
