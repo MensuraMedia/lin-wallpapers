@@ -20,7 +20,9 @@ class PreviewPage(BasePage):
         frame.set_vexpand(True)
 
         self.picture = Gtk.Picture()
-        self.picture.set_content_fit(Gtk.ContentFit.COVER)
+        # CONTAIN so the baked-in fit (letterbox/centre padding) shows whole
+        # and each Fit/Center/Fill/Stretch render looks visibly different.
+        self.picture.set_content_fit(Gtk.ContentFit.CONTAIN)
         self.picture.set_vexpand(True)
         self.picture.set_hexpand(True)
         frame.set_child(self.picture)

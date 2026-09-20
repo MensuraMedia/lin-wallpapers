@@ -9,6 +9,7 @@ from linwallpaper import imaging
 from linwallpaper.backends import all_backends, detect_backend
 from linwallpaper.backends._gsettings import path_to_uri, uri_to_path
 from linwallpaper.backends.cinnamon import CinnamonBackend
+from linwallpaper.monitors import MonitorInfo
 
 
 @pytest.fixture()
@@ -59,6 +60,73 @@ def test_fit_to_picture_options_mapping():
 def test_uri_roundtrip():
     p = "/home/user/Pictures/a b.png"
     assert uri_to_path(path_to_uri(p)) == p
+
+
+def test_validate_accepts_real_image(sample):
+    ok, reason = imaging.validate(sample)
+    assert ok
+    assert reason == "ok"
+
+
+def test_validate_rejects_missing_file(tmp_path):
+    ok, reason = imaging.validate(tmp_path / "does-not-exist.png")
+    assert not ok
+    assert "not found" in reason
+
+
+def test_validate_rejects_non_image(tmp_path):
+    junk = tmp_path / "notes.txt"
+    junk.write_text("this is definitely not an image")
+    ok, reason = imaging.validate(junk)
+    assert not ok
+    assert reason  # a human-readable reason, no exception
+
+
+def test_validate_rejects_directory(tmp_path):
+    ok, _reason = imaging.validate(tmp_path)
+    assert not ok
+
+
+def test_validate_rejects_truncated_image(tmp_path, sample):
+    # Copy only the first few bytes: a real header, but corrupt body.
+    truncated = tmp_path / "broken.png"
+    from pathlib import Path
+
+    truncated.write_bytes(Path(sample).read_bytes()[:64])
+    ok, _reason = imaging.validate(truncated)
+    assert not ok
+
+
+def _mon(name, w, h, x, scale=1, primary=False):
+    return MonitorInfo(name=name, width=w, height=h, scale=scale, x=x, y=0, primary=primary)
+
+
+def test_cinnamon_apply_one_screen_builds_spanned_composite(sample):
+    monitors = [_mon("DP-1", 1920, 1080, 0, primary=True), _mon("HDMI-1", 1920, 1080, 1920)]
+    calls: list[list[str]] = []
+
+    def fake_run(argv):
+        calls.append(argv)
+        if argv[:2] == ["gsettings", "get"]:
+            return "" if argv[3] == "picture-uri" else "zoom"
+        if argv[:2] == ["gsettings", "list-schemas"]:
+            return "org.cinnamon.desktop.background"
+        return ""
+
+    be = CinnamonBackend(runner=fake_run)
+    result = be.apply(sample, imaging.FIT_FILL, monitors=monitors, target="HDMI-1")
+
+    sets = [c for c in calls if c[:2] == ["gsettings", "set"]]
+    opt = next(c[4] for c in sets if c[3] == "picture-options")
+    uri = next(c[4] for c in sets if c[3] == "picture-uri")
+    assert opt == "spanned"
+    composite = uri_to_path(uri)
+    assert composite.endswith(".png")
+    # the composite must actually exist and span both monitors (3840x1080)
+    img = imaging.load(composite)
+    assert img.size == (3840, 1080)
+    assert result.target == "HDMI-1"
+    assert "composite" in result.note
 
 
 def test_cinnamon_apply_all_uses_injected_runner(sample):

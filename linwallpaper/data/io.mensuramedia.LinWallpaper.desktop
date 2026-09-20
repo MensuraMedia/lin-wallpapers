@@ -1,0 +1,14 @@
+[Desktop Entry]
+# Exec is rewritten by install.sh to this checkout's run.sh (python3 -m linwallpaper.main).
+Type=Application
+Version=1.0
+Name=LinWallpaper
+GenericName=Wallpaper
+Comment=Open an image, preview how it fits, and apply it to your desktop background
+Icon=io.mensuramedia.LinWallpaper
+Exec=linwallpaper
+Terminal=false
+Categories=Settings;DesktopSettings;GTK;
+Keywords=wallpaper;background;desktop;screen;monitor;
+StartupNotify=true
+StartupWMClass=io.mensuramedia.LinWallpaper

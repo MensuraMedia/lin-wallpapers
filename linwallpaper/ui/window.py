@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from gi.repository import Adw, Gio, Gtk
 
-from .. import APP_TITLE, imaging
+from .. import APP_ID, APP_TITLE, imaging
 from ..backends import detect_backend
 from ..monitors import desktop_name, list_monitors
 from .pages.preview import PreviewPage
@@ -20,6 +20,7 @@ class AppWindow(Adw.ApplicationWindow):
         super().__init__(application=app)
         self.set_title(APP_TITLE)
         self.set_default_size(1180, 760)
+        self.set_icon_name(APP_ID)  # taskbar/menu icon once installed
         self.add_css_class("linwallpaper")
 
         try:
@@ -64,6 +65,7 @@ class AppWindow(Adw.ApplicationWindow):
     def navigate(self, route: str) -> None:
         if route in self._pages:
             self.stack.set_visible_child_name(route)
+            self.sidebar.select(route)  # keep the sidebar highlight in sync
             page = self._pages[route]
             if hasattr(page, "refresh"):
                 page.refresh()
@@ -76,6 +78,11 @@ class AppWindow(Adw.ApplicationWindow):
         filt.set_name("Images")
         for mime in imaging.supported_mime_types():
             filt.add_mime_type(mime)
+        # Also match by extension: mime sniffing can miss files, but the pixbuf
+        # loaders enumerate every extension they accept — belt and braces.
+        for fmt in imaging.supported_formats():
+            for ext in fmt["extensions"]:
+                filt.add_suffix(ext)
         filters = Gio.ListStore.new(Gtk.FileFilter)
         filters.append(filt)
         dialog.set_filters(filters)
@@ -91,12 +98,26 @@ class AppWindow(Adw.ApplicationWindow):
             path = gfile.get_path()
             if not path:
                 return
-            if on_chosen:
-                on_chosen(path)
-            else:
-                self.state.set_image(path)
+            self.load_image(path, on_chosen)
 
         dialog.open(self, None, cb)
+
+    def load_image(self, path: str, on_ok=None) -> bool:
+        """Validate ``path`` then set it (or call ``on_ok``); toast on failure.
+
+        Central gate for every way an image enters the app (Open dialog,
+        per-screen chooser, drag-and-drop) so a bad/missing/corrupt file shows
+        an inline error and never crashes.
+        """
+        ok, reason = imaging.validate(path)
+        if not ok:
+            self.toast(f"Can't open image: {reason}")
+            return False
+        if on_ok:
+            on_ok(path)
+        else:
+            self.state.set_image(path)
+        return True
 
     def apply(self, target: str) -> None:
         if not self.state.image_path or not self.state.backend:

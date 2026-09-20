@@ -23,7 +23,10 @@ class WallpaperPage(BasePage):
 
         # preview
         self.picture = Gtk.Picture()
-        self.picture.set_content_fit(Gtk.ContentFit.COVER)
+        # CONTAIN: the fit is already baked into the render (monitor aspect,
+        # with letterbox/centre padding), so show it whole — the widget must
+        # not crop it, or Fit/Center would look like Fill.
+        self.picture.set_content_fit(Gtk.ContentFit.CONTAIN)
         self.picture.set_size_request(-1, 380)
         self.picture.add_css_class("lw-preview")
         self.picture.set_vexpand(True)
@@ -178,7 +181,7 @@ class WallpaperPage(BasePage):
         try:
             files = value.get_files()
             if files:
-                self.state.set_image(files[0].get_path())
+                self.win.load_image(files[0].get_path())
                 return True
         except Exception:
             pass

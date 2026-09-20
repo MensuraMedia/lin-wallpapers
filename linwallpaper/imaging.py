@@ -10,7 +10,7 @@ import hashlib
 import os
 from pathlib import Path
 
-from PIL import Image
+from PIL import Image, UnidentifiedImageError
 
 # Canonical fit modes used everywhere in the app.
 FIT_FILL = "fill"  # cover: scale up, centre-crop (default)
@@ -31,6 +31,30 @@ FIT_LABELS = {
 CACHE_DIR = Path.home() / ".cache" / "linwallpaper"
 
 _PAD = (18, 20, 26)  # letterbox / center pad colour (dark, matches surface)
+
+
+def validate(path: str | os.PathLike) -> tuple[bool, str]:
+    """Cheaply check that ``path`` is a decodable image.
+
+    Returns ``(ok, reason)`` — ``reason`` is a short human string when not ok.
+    Never raises: a missing, empty or corrupt file yields ``(False, ...)`` so
+    callers can surface a toast instead of crashing.
+    """
+    p = Path(path)
+    if not p.exists():
+        return False, "file not found"
+    if p.is_dir():
+        return False, "that is a folder, not an image"
+    try:
+        with Image.open(p) as im:
+            im.verify()  # header/format check without full decode
+    except FileNotFoundError:
+        return False, "file not found"
+    except UnidentifiedImageError:
+        return False, "not a supported image format"
+    except (OSError, ValueError, SyntaxError):
+        return False, "the image is corrupt or unreadable"
+    return True, "ok"
 
 
 def load(path: str | os.PathLike) -> Image.Image:
