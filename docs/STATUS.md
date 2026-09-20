@@ -69,10 +69,14 @@ doesn't / what's left" snapshot._
   right-click does nothing. **The user has reported the right-click does not work in the running
   app.** Likely cause: the `Gtk.FlowBox`/`FlowBoxChild` consumes the button event before the card's
   gesture fires, or the gesture is attached to the wrong target/phase.
-- **To make it ✅:** reproduce a real right-click in the live app; if it doesn't open the menu, move
-  the gesture to the widget that actually receives the event (or handle it on the `FlowBox` /
-  `FlowBoxChild`), and add a smoke assertion that dispatches a synthetic button-3 event (not a direct
-  handler call). **This is the top open item.**
+- **✅ RESOLVED (2026-09-20).** Two real causes, neither the FlowBox: (1) the click gesture was created
+  and discarded, so PyGObject garbage-collected it and it silently detached (fixed: `compat` now retains
+  the gesture on the widget); (2) the card was a windowless `Gtk.Box`, so a real GTK 3 pointer event never
+  reached it (fixed: `compat.click_target` wraps the clickable content in a windowed `Gtk.EventBox`).
+  Applied to Browse's `ImageCard` and the new Test card. **Proven via the real input path** — new smoke
+  drivers dispatch a real button-3 event through `Gtk.main_do_event` (not a direct handler call) and assert
+  the menu opens, for a Browse card inside the FlowBox and for the Test card. Right-click now works;
+  live confirmation by the user is still welcome.
 
 ---
 
@@ -130,7 +134,8 @@ make check                    # full gate: shellcheck, ruff, mypy, gtk4_lint, im
   `virtual-desktop-wallpapers.md`.
 
 ## Open items (priority order)
-1. **⚠️ Verify/fix the Browse right-click** so a real right-click opens the Exclude menu (see the 🧪
-   section) — currently the top gap between "tested" and "actually works."
+1. ✅ **Done (2026-09-20):** the Browse right-click now works — fixed the gesture-GC and windowless-card
+   bugs, proven via `Gtk.main_do_event`. A live right-click by the user is the final confirmation.
 2. Close **M1** with **P7** (perf + acceptance).
 3. Decide whether to pull **Collections** (M6.7) forward as the next buildable menu item.
+4. Wire the disabled **Add to Collection / Preview** context-menu items once M6 / M3 land.
