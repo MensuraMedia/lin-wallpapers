@@ -10,7 +10,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gdk, Gio, Gtk  # noqa: E402
+from gi.repository import Adw, Gdk, Gio, GLib, Gtk  # noqa: E402
 
 from . import APP_ID  # noqa: E402
 from .ui.window import AppWindow  # noqa: E402
@@ -45,6 +45,10 @@ class LinWallpaperApp(Adw.Application):
 
 
 def main(argv: list[str] | None = None) -> int:
+    # WM_CLASS must equal the .desktop's StartupWMClass (= APP_ID) or the panel/taskbar
+    # can't map the window to its icon. Launched as `python -m …`, prgname would be "main.py";
+    # pin it to the app id so the lower-panel icon resolves. Must run before the display connects.
+    GLib.set_prgname(APP_ID)
     app = LinWallpaperApp()
     return app.run(argv if argv is not None else sys.argv)
 
