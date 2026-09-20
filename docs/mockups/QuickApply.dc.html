@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&amp;display=swap" rel="stylesheet">
+  <style>
+    body { margin: 0; background: #1E2233; font-family: Manrope, Ubuntu, Cantarell, sans-serif; color: #F2F3F7; }
+    button { font-family: inherit; cursor: pointer; }
+  </style>
+</helmet>
+
+<div style="width: 1280px; height: 800px; box-sizing: border-box; display: flex; background: #1E2233; overflow: hidden;">
+
+  <dc-import name="Sidebar" active="browse" hint-size="150px,800px"></dc-import>
+
+  <div style="position: relative; flex-grow: 1; box-sizing: border-box; padding: 20px 24px; display: flex; flex-direction: column; gap: 14px; min-width: 0;">
+
+    <!-- dimmed Browse behind -->
+    <div style="opacity: 0.32; display: flex; flex-direction: column; gap: 14px;">
+      <h1 style="margin: 0; font-size: 22px; font-weight: 800;">Browse</h1>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 20px;">
+        <div style="height: 176px; border-radius: 14px; background: #252A3E;"></div>
+        <div style="height: 176px; border-radius: 14px; background: #252A3E;"></div>
+        <div style="height: 176px; border-radius: 14px; background: #252A3E;"></div>
+        <div style="height: 176px; border-radius: 14px; background: #252A3E;"></div>
+      </div>
+    </div>
+
+    <!-- scrim -->
+    <div style="position: absolute; inset: 0; background: rgba(8,11,20,0.58);"></div>
+
+    <!-- popup -->
+    <div style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 560px; box-sizing: border-box; padding: 20px; border-radius: 18px; background: #252A3E; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 28px 76px rgba(0,0,0,0.6); display: flex; flex-direction: column; gap: 15px;">
+
+      <div style="display: flex; align-items: flex-end; gap: 12px;">
+        <div style="display: flex; flex-direction: column; gap: 2px;">
+          <span style="font-size: 16px; font-weight: 800;">Preview &amp; apply</span>
+          <span style="font-size: 12px; color: #9AA0B0;">mountain-horizon.jpg</span>
+        </div>
+        <span style="flex-grow: 1;"></span>
+        <span style="padding: 3px 9px; border-radius: 999px; background: rgba(255,199,0,0.14); color: #FFC700; font-size: 10.5px; font-weight: 800;">FILL · CENTRE CROP</span>
+      </div>
+
+      <!-- preview at the current resolution -->
+      <div style="position: relative; height: 220px; border-radius: 12px; overflow: hidden; border: 1px solid rgba(255,255,255,0.09); background-image: linear-gradient(170deg, #1B2A4A 0%, #3C6E9B 45%, #E9A05A 100%);">
+        <svg viewBox="0 0 560 220" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+          <circle cx="420" cy="60" r="26" fill="#FFE1A6" opacity="0.92"/>
+          <polygon points="0,140 116,74 208,118 310,58 430,124 560,84 560,220 0,220" fill="#2C3E63"/>
+          <polygon points="0,178 110,132 232,172 350,120 470,166 560,144 560,220 0,220" fill="#1B2440"/>
+        </svg>
+      </div>
+
+      <!-- resolution line -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="#9AA0B0" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="13" rx="1.6"/><path d="M8 20h8M12 17v3"/></svg>
+        <span style="font-size: 12.5px; font-weight: 700; font-variant-numeric: tabular-nums;">Fitted to 2560 × 1080</span>
+        <span style="font-size: 12px; color: #9AA0B0;">· HDMI-A-0 (primary) · 8 % cropped</span>
+      </div>
+
+      <!-- surface checkboxes -->
+      <div style="display: flex; flex-direction: column; gap: 5px;">
+        <span style="font-size: 10.5px; font-weight: 800; letter-spacing: 0.07em; color: #9AA0B0;">APPLY TO SCREENS</span>
+
+        <label style="display: flex; align-items: center; gap: 11px; height: 40px; padding: 0 12px; border-radius: 10px; background: #1E2233; border: 1px solid rgba(255,255,255,0.08);">
+          <span style="width: 19px; height: 19px; border-radius: 6px; background: #FFC700; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1A1400" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>
+          <span style="font-size: 12.5px; font-weight: 700;">Desktop</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="font-size: 11px; color: #9AA0B0;">Cinnamon · now: aurora-4k.jpg</span>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 11px; height: 40px; padding: 0 12px; border-radius: 10px; background: #1E2233; border: 1px solid rgba(255,255,255,0.08);">
+          <span style="width: 19px; height: 19px; border-radius: 6px; background: #FFC700; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1A1400" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>
+          <span style="font-size: 12.5px; font-weight: 700;">Lock Screen</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="font-size: 11px; color: #9AA0B0;">follows the desktop</span>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 11px; height: 40px; padding: 0 12px; border-radius: 10px; background: #1E2233; border: 1px solid rgba(255,255,255,0.08);">
+          <span style="width: 19px; height: 19px; border-radius: 6px; background: transparent; border: 1.6px solid rgba(255,255,255,0.32);"></span>
+          <span style="font-size: 12.5px; font-weight: 700;">Login Screen</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="display: flex; align-items: center; gap: 5px; font-size: 11px; color: #FFB500;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#FFB500" stroke-width="1.9" stroke-linecap="round"><rect x="4.5" y="10" width="15" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>needs authorization</span>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 11px; height: 40px; padding: 0 12px; border-radius: 10px; background: #1E2233; border: 1px solid rgba(255,255,255,0.08);">
+          <span style="width: 19px; height: 19px; border-radius: 6px; background: #FFC700; display: flex; align-items: center; justify-content: center;"><svg viewBox="0 0 24 24" width="12" height="12" fill="none" stroke="#1A1400" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg></span>
+          <span style="font-size: 12.5px; font-weight: 700;">Boot Splash</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="font-size: 11px; color: #9AA0B0;">Plymouth</span>
+        </label>
+
+        <label style="display: flex; align-items: center; gap: 11px; height: 40px; padding: 0 12px; border-radius: 10px; background: #1B1E2C; border: 1px solid rgba(255,255,255,0.05); opacity: 0.55;">
+          <span style="width: 19px; height: 19px; border-radius: 6px; background: transparent; border: 1.6px solid rgba(255,255,255,0.2);"></span>
+          <span style="font-size: 12.5px; font-weight: 700; color: #9AA0B0;">Boot Menu</span>
+          <span style="flex-grow: 1;"></span>
+          <span style="font-size: 11px; color: #9AA0B0;">unavailable · no provider detected</span>
+        </label>
+      </div>
+
+      <!-- footer -->
+      <div style="display: flex; align-items: center; gap: 10px;">
+        <span style="font-size: 10.5px; color: #6E7386; max-width: 210px; line-height: 1.35;">Apply lands on the Screens page so you can set the rest.</span>
+        <span style="flex-grow: 1;"></span>
+        <button type="button" style="height: 36px; padding: 0 16px; border: 1px solid rgba(255,255,255,0.16); border-radius: 999px; background: transparent; color: #F2F3F7; font-size: 12px; font-weight: 700;">Cancel</button>
+        <button type="button" style="display: flex; align-items: center; gap: 8px; height: 36px; padding: 0 20px; border: 0; border-radius: 999px; background: #FFC700; color: #1A1400; font-size: 12.5px; font-weight: 800;">
+          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#1A1400" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12.5 4.5 4.5L19 7"/></svg>
+          Apply
+        </button>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"$preview":{"width":1280,"height":800}}'>
+class Component extends DCLogic { renderVals() { return {}; } }
+</script>
+</body>
+</html>

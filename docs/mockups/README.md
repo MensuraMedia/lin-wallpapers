@@ -13,6 +13,9 @@ surfaces, one yellow accent #FFC700). Values are illustrative but taken from the
 | `Preview.dc.html` | **Preview**: all five screens rendered from the same transform — desktop with panel, lock with clock, greeter with avatar and field, Plymouth splash with spinner, GRUB menu | `wallpaper` tweak: Mountain / Forest / Night switches all five previews |
 | `Apply.dc.html` | **Apply**: the plan sheet (11 steps, straight from the base script), the verified result with per-surface outcomes and the backup path, and apply history including a rolled-back attempt | Links |
 | `Sidebar.dc.html` | Shared sidebar component (`active` tweak) — logo, routes, "this machine" footer | Yes |
+| `BrowseMenu.dc.html` | **Browse right-click menu**: the context menu over a card — Exclude Image · Exclude Folder · Add to Collection ▸ · Preview… (see `docs/design/browse-context-menu.md`) | Static |
+| `Collect.dc.html` | **Add to Collection** dialog: existing collections with counts + a *New collection…* inline field | Static |
+| `QuickApply.dc.html` | **Preview popup**: the fitted preview, the resolution line, the five surface checkboxes (one greyed with a reason) and Apply | Static |
 
 ## Screenshots
 

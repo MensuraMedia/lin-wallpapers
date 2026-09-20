@@ -32,6 +32,9 @@ ACTIVE_BY_BOARD = {
     "Preview": "preview",
     "Apply": "history",
     "Sidebar": "browse",
+    "BrowseMenu": "browse",
+    "Collect": "browse",
+    "QuickApply": "browse",
 }
 
 # renderVals() of Preview.dc.html, "Mountain" preset
