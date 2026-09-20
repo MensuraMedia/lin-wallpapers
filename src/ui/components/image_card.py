@@ -39,9 +39,12 @@ class ImageCard(Gtk.Box):  # type: ignore[misc]
         self.card = card
         self._on_activate = on_activate
         self._on_context_menu = on_context_menu
+        self.menu: Any = None  # the popover the last right-click opened; None until one fires
         compat.add_class(self, "image-card")
         if card.missing or card.excluded or card.unusable:
             compat.add_class(self, "dimmed")
+
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=Layout.spacing.XSMALL)
 
         self._thumb = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self._thumb.set_size_request(THUMB_WIDTH, THUMB_HEIGHT)
@@ -49,7 +52,7 @@ class ImageCard(Gtk.Box):  # type: ignore[misc]
         self._thumb.set_valign(Gtk.Align.CENTER)
         compat.add_class(self._thumb, "thumb")
         # The score ring (M2) will live in this reserved slot; empty until then.
-        compat.append(self, self._thumb)
+        compat.append(content, self._thumb)
 
         meta = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=Layout.spacing.XSMALL)
         name = Gtk.Label(label=card.name)
@@ -62,12 +65,17 @@ class ImageCard(Gtk.Box):  # type: ignore[misc]
             chip = Gtk.Label(label=f"{card.width}×{card.height}")
             compat.add_class(chip, "res-chip", "tabular")
             compat.append(meta, chip)
-        compat.append(self, meta)
+        compat.append(content, meta)
 
+        # Attach the gestures to a widget that OWNS a GdkWindow — a windowless box never receives a real
+        # pointer click (its events go to the nearest windowed ancestor), which is why the Browse
+        # right-click did not fire in the live app despite passing its tests (compat.click_target).
+        self.click_target = compat.click_target(content)
+        compat.append(self, self.click_target)
         if on_activate is not None:
-            compat.click_gesture(self, self._clicked)
+            compat.click_gesture(self.click_target, self._clicked)
         if on_context_menu is not None:
-            compat.secondary_click_gesture(self, self._context_menu)
+            compat.secondary_click_gesture(self.click_target, self._context_menu)
 
         self._show_placeholder("none")
         load_thumb(card.id, self._on_thumb)
@@ -78,7 +86,7 @@ class ImageCard(Gtk.Box):  # type: ignore[misc]
 
     def _context_menu(self, _n_press: int, x: float, y: float) -> None:
         if self._on_context_menu is not None:
-            self._on_context_menu(self, self.card, x, y)
+            self.menu = self._on_context_menu(self.click_target, self.card, x, y)
 
     def _on_thumb(self, result: Any) -> None:
         if isinstance(result, bytes | bytearray):

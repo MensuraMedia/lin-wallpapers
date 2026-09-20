@@ -116,6 +116,14 @@ def _settings(cr: Any) -> None:
     cr.stroke()
 
 
+def _test(cr: Any) -> None:
+    # A laboratory flask: neck, body and a liquid line — the Test (verification) page.
+    _polyline(cr, (9, 4), (9, 9), (4.5, 19), (19.5, 19), (15, 9), (15, 4))
+    _polyline(cr, (8, 4), (16, 4))
+    _polyline(cr, (7, 14), (17, 14))
+    cr.stroke()
+
+
 GLYPHS: dict[str, Callable[[Any], None]] = {
     "browse": _browse,
     "image": _image,
@@ -125,6 +133,7 @@ GLYPHS: dict[str, Callable[[Any], None]] = {
     "collections": _collections,
     "history": _history,
     "settings": _settings,
+    "test": _test,
 }
 
 

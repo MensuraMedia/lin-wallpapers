@@ -38,7 +38,7 @@ def _run(*args: str) -> subprocess.CompletedProcess[str]:
 def test_app_starts_switches_every_route_and_exits_cleanly() -> None:
     result = _run("-m", "tests.smoke.drive_app")
     assert result.returncode == 0, result.stderr
-    assert "visited 9 routes" in result.stdout
+    assert "visited 10 routes" in result.stdout
     for marker in NOISE:
         assert marker not in result.stderr, result.stderr
 

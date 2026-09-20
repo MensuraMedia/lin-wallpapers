@@ -24,6 +24,7 @@ NAV_ITEMS: tuple[tuple[str, str, str], ...] = (
     ("Collections", "collections", "view-list-symbolic"),
     ("History", "history", "document-open-recent-symbolic"),
     ("Settings", "settings", "emblem-system-symbolic"),
+    ("Test", "test", "system-run-symbolic"),
 )
 
 TAGLINE = "EVERY SCREEN"

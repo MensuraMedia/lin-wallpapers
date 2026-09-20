@@ -22,6 +22,7 @@ __all__ = [
     "children",
     "clear_children",
     "click_gesture",
+    "click_target",
     "foreground_color",
     "icon",
     "image_from_bytes",
@@ -220,6 +221,43 @@ def on_close_request(window: Any, handler: Callable[[], None]) -> None:
     window.connect("close-request" if IS_GTK4 else "delete-event", _closing)
 
 
+def click_target(child: Any) -> Any:
+    """A widget that owns a ``GdkWindow`` so real pointer events target it, wrapping ``child``.
+
+    GTK 3 boxes and frames are windowless (``NO_WINDOW``): a real button press is delivered to the nearest
+    ancestor that owns a ``GdkWindow``, and gestures run only on that widget and its ancestors — never on a
+    windowless descendant. A secondary-click gesture on a plain box therefore never fires on a *real* click
+    (only on an event dispatched straight to the widget). Wrapping the clickable content in a
+    ``Gtk.EventBox`` — which owns its own window and, here, enables button events — makes that content the
+    event target, so a gesture attached to the returned widget fires on a genuine pointer click. Its window
+    is transparent (the ``.click-target`` class), so the card's own background and rounded corners show
+    through. GTK 4 has no windowless distinction, so the child is returned unwrapped.
+    """
+    if IS_GTK4:
+        return child
+    box = Gtk.EventBox()
+    box.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
+    add_class(box, "click-target")
+    set_child(box, child)
+    return box
+
+
+def _retain_gesture(widget: Any, gesture: Any) -> None:
+    """Anchor a GTK 3 gesture to the widget so it is not garbage-collected.
+
+    ``Gtk.GestureMultiPress.new(widget)`` does not give the widget a Python reference to the gesture, so
+    once the caller drops the return value PyGObject collects it and the controller silently detaches —
+    the gesture then never fires on a real event (the live Browse right-click bug). Storing it on the
+    widget makes it live exactly as long as the widget. Harmless under GTK 4, where ``add_controller``
+    already transfers ownership.
+    """
+    store = getattr(widget, "_compat_gestures", None)
+    if store is None:
+        store = []
+        widget._compat_gestures = store
+    store.append(gesture)
+
+
 def click_gesture(widget: Any, on_pressed: Callable[[int, float, float], None]) -> Any:
     """Attach a click gesture; ``on_pressed(n_press, x, y)``. Never ``button-press-event``."""
 
@@ -232,6 +270,7 @@ def click_gesture(widget: Any, on_pressed: Callable[[int, float, float], None]) 
     else:
         gesture = Gtk.GestureMultiPress.new(widget)
     gesture.connect("pressed", _pressed)
+    _retain_gesture(widget, gesture)
     return gesture
 
 
@@ -252,6 +291,7 @@ def secondary_click_gesture(widget: Any, on_pressed: Callable[[int, float, float
         gesture = Gtk.GestureMultiPress.new(widget)
     gesture.set_button(Gdk.BUTTON_SECONDARY)
     gesture.connect("pressed", _pressed)
+    _retain_gesture(widget, gesture)
     return gesture
 
 

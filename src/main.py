@@ -33,6 +33,7 @@ from src.viewmodels.gdk_displays import GdkDisplayProbe
 from src.viewmodels.scan_vm import ScanVM
 from src.viewmodels.services import AppServices
 from src.viewmodels.sources_vm import SourcesVM
+from src.viewmodels.test_vm import TestVM
 
 
 class LinWallpapersApp(Gtk.Application):  # type: ignore[misc]
@@ -44,6 +45,7 @@ class LinWallpapersApp(Gtk.Application):  # type: ignore[misc]
         self.scan_vm: ScanVM | None = None
         self.sources_vm: SourcesVM | None = None
         self.browse_vm: BrowseVM | None = None
+        self.test_vm: TestVM | None = None
         self.page_context: PageContext | None = None
 
     def do_startup(self) -> None:
@@ -83,10 +85,12 @@ class LinWallpapersApp(Gtk.Application):  # type: ignore[misc]
         self.scan_vm = ScanVM(self.services)
         self.sources_vm = SourcesVM(self.services)
         self.browse_vm = BrowseVM(self.services)
+        self.test_vm = TestVM(self.services, _test_search_dirs())
         self.page_context = PageContext(
             scan_vm=self.scan_vm,
             sources_vm=self.sources_vm,
             browse_vm=self.browse_vm,
+            test_vm=self.test_vm,
             segment=browse_module.Segment,
             orientation=browse_module.Orientation,
             aspect=browse_module.AspectBucket,
@@ -154,6 +158,22 @@ class LinWallpapersApp(Gtk.Application):  # type: ignore[misc]
         else:
             threads.shutdown(wait=False)
         Gtk.Application.do_shutdown(self)
+
+
+def _test_search_dirs() -> list[Path]:
+    """Fallback directories the Test page's ``TestVM`` searches when the catalogue is empty.
+
+    The composition root reads the environment (view models must not): ``LWP_TEST_IMAGE_DIR``, when set,
+    is searched first, so the Test-page right-click smoke test is deterministic without a scan.
+    """
+    dirs: list[Path] = []
+    override = os.environ.get("LWP_TEST_IMAGE_DIR")
+    if override:
+        dirs.append(Path(override))
+    home = Path.home()
+    dirs += [home / "Pictures", Path("/usr/share/backgrounds")]
+    dirs += [home / "Wallpapers", Path("/usr/share/wallpapers")]
+    return dirs
 
 
 def main(argv: list[str] | None = None) -> int:

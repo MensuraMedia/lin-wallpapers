@@ -21,8 +21,9 @@ from .page_preview import PreviewPage
 from .page_screens import ScreensPage
 from .page_settings import SettingsPage
 from .page_sources import SourcesPage
+from .page_test import TestPage
 
-# Sidebar routes, in order (Ctrl+1…8), then the pages reached from elsewhere.
+# Sidebar routes, in order (Ctrl+1…9), then the pages reached from elsewhere.
 SIDEBAR_PAGES: tuple[type[BasePage], ...] = (
     BrowsePage,
     ImagePage,
@@ -32,6 +33,7 @@ SIDEBAR_PAGES: tuple[type[BasePage], ...] = (
     CollectionsPage,
     HistoryPage,
     SettingsPage,
+    TestPage,
 )
 OTHER_PAGES: tuple[type[BasePage], ...] = (AboutPage,)
 ALL_PAGES = SIDEBAR_PAGES + OTHER_PAGES
@@ -44,6 +46,7 @@ class PageContext:
     scan_vm: Any = None
     sources_vm: Any = None
     browse_vm: Any = None
+    test_vm: Any = None
     segment: Any = None
     orientation: Any = None
     aspect: Any = None
