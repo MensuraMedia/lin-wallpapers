@@ -33,10 +33,12 @@ class ImageCard(Gtk.Box):  # type: ignore[misc]
         card: Any,
         load_thumb: Callable[[int, Callable[[Any], None]], Any],
         on_activate: Callable[[int], None] | None = None,
+        on_context_menu: Callable[[Any, Any, float, float], None] | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=Layout.spacing.XSMALL)
         self.card = card
         self._on_activate = on_activate
+        self._on_context_menu = on_context_menu
         compat.add_class(self, "image-card")
         if card.missing or card.excluded or card.unusable:
             compat.add_class(self, "dimmed")
@@ -64,6 +66,8 @@ class ImageCard(Gtk.Box):  # type: ignore[misc]
 
         if on_activate is not None:
             compat.click_gesture(self, self._clicked)
+        if on_context_menu is not None:
+            compat.secondary_click_gesture(self, self._context_menu)
 
         self._show_placeholder("none")
         load_thumb(card.id, self._on_thumb)
@@ -71,6 +75,10 @@ class ImageCard(Gtk.Box):  # type: ignore[misc]
     def _clicked(self, _n_press: int, _x: float, _y: float) -> None:
         if self._on_activate is not None:
             self._on_activate(self.card.id)
+
+    def _context_menu(self, _n_press: int, x: float, y: float) -> None:
+        if self._on_context_menu is not None:
+            self._on_context_menu(self, self.card, x, y)
 
     def _on_thumb(self, result: Any) -> None:
         if isinstance(result, bytes | bytearray):

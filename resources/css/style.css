@@ -302,3 +302,57 @@ scrollbar slider {
 scrollbar slider:hover {
     background-color: @text-dim;
 }
+
+/* Browse right-click menu (M1.7) */
+.context-menu {
+    padding: 4px;
+}
+
+.context-menu-item {
+    padding: 6px 10px;
+    border-radius: 8px;
+    color: @text;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+.context-menu-item:hover {
+    background-color: @bg-raised;
+}
+
+.context-menu-item:disabled {
+    color: @text-dim;
+}
+
+.context-menu-sep {
+    margin: 4px 6px;
+    background-color: @stroke;
+}
+
+/* Undo toast (M1.7) */
+.toast {
+    padding: 8px 10px 8px 14px;
+    margin-bottom: 12px;
+    border-radius: 12px;
+    border: 1px solid @stroke;
+    background-color: @bg-raised;
+    box-shadow: 0 6px 20px alpha(@bg-base, 0.6);
+}
+
+.toast-message {
+    color: @text;
+    font-size: 12px;
+}
+
+.toast-undo {
+    padding: 2px 10px;
+    border-radius: 8px;
+    color: @accent;
+    background-color: transparent;
+    box-shadow: none;
+    font-weight: 600;
+}
+
+.toast-undo:hover {
+    background-color: @bg-surface;
+}

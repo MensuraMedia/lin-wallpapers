@@ -19,6 +19,8 @@ class Dimensions:
     CONTENT_MARGIN = 24  # left / right of the page
     CONTENT_MARGIN_TOP = 20  # top / bottom of the page
 
+    CONTEXT_MENU_WIDTH = 208  # the Browse right-click popover (M1.7)
+
 
 class Spacing:
     """Multiples of the 8 px grid."""

@@ -26,8 +26,10 @@ __all__ = [
     "icon",
     "image_from_bytes",
     "lookup_color",
+    "menu_popover",
     "on_close_request",
     "remove_class",
+    "secondary_click_gesture",
     "set_child",
     "set_tracked_text",
     "set_wrap",
@@ -231,6 +233,53 @@ def click_gesture(widget: Any, on_pressed: Callable[[int, float, float], None]) 
         gesture = Gtk.GestureMultiPress.new(widget)
     gesture.connect("pressed", _pressed)
     return gesture
+
+
+def secondary_click_gesture(widget: Any, on_pressed: Callable[[int, float, float], None]) -> Any:
+    """Attach a right-click (secondary-button) gesture; ``on_pressed(n_press, x, y)``.
+
+    A GTK-version-branching click controller filtered to the secondary button — the popup-menu affordance
+    that ``button-press-event`` used to carry. Lives here so pages/components never touch the raw event.
+    """
+
+    def _pressed(_gesture: Any, n_press: int, x: float, y: float) -> None:
+        on_pressed(n_press, x, y)
+
+    if IS_GTK4:
+        gesture = Gtk.GestureClick()
+        widget.add_controller(gesture)
+    else:
+        gesture = Gtk.GestureMultiPress.new(widget)
+    gesture.set_button(Gdk.BUTTON_SECONDARY)
+    gesture.connect("pressed", _pressed)
+    return gesture
+
+
+def menu_popover(parent: Any, child: Any, x: float, y: float) -> Any:
+    """A ``Gtk.Popover`` holding ``child``, pointed at ``(x, y)`` in ``parent`` and popped up at once.
+
+    The one place the GTK 3 / GTK 4 popover parenting and teardown differ: GTK 3 takes ``relative_to`` at
+    construction, GTK 4 needs an explicit ``set_parent`` / ``unparent``. Returns the popover so the caller
+    can keep or dismiss it.
+    """
+    rectangle = Gdk.Rectangle()
+    rectangle.x = int(x)
+    rectangle.y = int(y)
+    rectangle.width = 1
+    rectangle.height = 1
+    if IS_GTK4:
+        popover = Gtk.Popover()
+        popover.set_parent(parent)
+        popover.set_has_arrow(False)
+        popover.connect("closed", lambda pop: pop.unparent())
+    else:
+        popover = Gtk.Popover.new(parent)
+    set_child(popover, child)
+    popover.set_pointing_to(rectangle)
+    popover.set_position(Gtk.PositionType.BOTTOM)
+    show(child)
+    popover.popup()
+    return popover
 
 
 class CanvasArea(Gtk.DrawingArea):  # type: ignore[misc]

@@ -13,8 +13,10 @@ from typing import Any
 from src.config.config_layout import Layout
 from src.gtk_version import Gtk
 from src.ui import compat
+from src.ui.components.context_menu import MenuAction, open_context_menu
 from src.ui.components.filter_bar import FilterBar
 from src.ui.components.image_grid import ImageGrid
+from src.ui.components.toast import Toast
 
 from .page_base import BasePage
 
@@ -55,11 +57,46 @@ class BrowsePage(BasePage):
         )
         compat.append(self, self._filter_bar)
 
-        self._grid = ImageGrid(self._vm.load_thumb, on_need_more=self._need_more)
+        self._grid = ImageGrid(
+            self._vm.load_thumb,
+            on_need_more=self._need_more,
+            on_context_menu=self._open_card_menu,
+        )
         compat.append(self, self._grid, expand=True)
+
+        self._toast = Toast()
+        compat.append(self, self._toast)
 
         self._vm.add_observer(self._on_state)
         self._vm.refresh()
+
+    # -- right-click context menu (M1.7) ----------------------------------------------------------------
+
+    def _open_card_menu(self, widget: Any, card: Any, x: float, y: float) -> Any:
+        actions: list[MenuAction | None] = [
+            MenuAction("Exclude Image", lambda: self._exclude_image(card)),
+            MenuAction("Exclude Folder", lambda: self._exclude_folder(card)),
+            None,
+            MenuAction("Add to Collection", enabled=False, reason="Arrives in M6"),
+            MenuAction("Preview…", enabled=False, reason="Arrives in M3"),
+        ]
+        return open_context_menu(widget, x, y, actions)
+
+    def _exclude_image(self, card: Any) -> None:
+        self._vm.exclude_image(card.id, cb=self._on_excluded)
+
+    def _exclude_folder(self, card: Any) -> None:
+        self._vm.exclude_folder(card.id, cb=self._on_excluded)
+
+    def _on_excluded(self, outcome: Any) -> None:
+        if not outcome.ok or outcome.rule_id is None:
+            return
+        if outcome.kind == "folder":
+            message = f"Excluded folder {outcome.label}"
+        else:
+            message = f"Excluded {outcome.label}"
+        rule_id = outcome.rule_id
+        self._toast.show_message(f"{message} · Undo", lambda: self._vm.undo_exclusion(rule_id))
 
     # -- segment switch ---------------------------------------------------------------------------------
 

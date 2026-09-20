@@ -11,16 +11,26 @@ through the scheduler so a burst of scan batches becomes one refresh.
 
 from __future__ import annotations
 
+import sqlite3
 from collections.abc import Callable, Sequence
 from dataclasses import dataclass, replace
 from enum import StrEnum
+from pathlib import Path
 from typing import Any
 
 from src.catalogue import queries
-from src.catalogue.db import Change
+from src.catalogue.db import (
+    Change,
+    ChangeKind,
+    add_rule,
+    apply_exclusions,
+    load_rules,
+    remove_rule,
+)
 from src.catalogue.model import ImageRow
 from src.catalogue.queries import QuerySpec, default_spec, fetch_page, get_image, segment_counts
 from src.catalogue.thumbs import ThumbSize
+from src.scanner.exclude import PatternError, RuleKind, compile_matcher, validate_rule
 from src.util.threads import Scheduler, run_in_worker
 from src.viewmodels.services import AppServices
 
@@ -94,6 +104,18 @@ class SegmentCounts:
 
 
 @dataclass(frozen=True)
+class ExcludeOutcome:
+    """The answer to an *Exclude Image / Folder* action: the new rule's id (as an undo token) and the
+    label the page shows in the undo toast (the image name for a file, the directory for a folder)."""
+
+    ok: bool
+    rule_id: str | None = None  # str(rule id): the token the page hands back to :meth:`undo_exclusion`
+    kind: str = ""  # 'file' | 'folder'
+    label: str = ""  # the image name (file) or the directory path (folder)
+    message: str = ""  # why it was refused, when ``ok`` is False
+
+
+@dataclass(frozen=True)
 class BrowseState:
     cards: tuple[ImageCard, ...] = ()
     total: int = 0
@@ -109,6 +131,7 @@ class BrowseVM:
     def __init__(self, services: AppServices, *, coalesce: Scheduler | None = None) -> None:
         self._services = services
         self._scheduler: Scheduler = services.scheduler
+        self._home = str(Path.home())
         # How change-feed bursts are collapsed: the app may pass a 100 ms-timeout scheduler; the default
         # collapses everything queued before the next scheduler turn (idle) into a single refresh.
         self._coalesce: Scheduler = coalesce if coalesce is not None else services.scheduler
@@ -294,6 +317,82 @@ class BrowseVM:
 
         return run_in_worker(work, done, scheduler=self._scheduler)
 
+    # -- exclusions (M1.7: right-click → Exclude Image / Exclude Folder, with undo) ---------------------
+
+    def exclude_image(
+        self, image_id: int, *, cb: Callable[[ExcludeOutcome], None] | None = None
+    ) -> object:
+        """Exclude one image by its exact path (a ``FILE`` rule, inode-pinned so a rename survives).
+
+        The row leaves Browse on its own through the change feed (the default query hides excluded rows);
+        the returned :class:`ExcludeOutcome` carries the rule id as the token :meth:`undo_exclusion` takes.
+        """
+
+        def work() -> ExcludeOutcome:
+            conn = self._services.read()
+            row = get_image(conn, image_id)
+            if row is None:
+                return ExcludeOutcome(False, kind="file", message="image not found")
+            try:
+                validate_rule(RuleKind.FILE, row.path)
+            except PatternError as error:
+                return ExcludeOutcome(False, kind="file", message=error.reason)
+            rule_id = self._services.writer.submit(
+                _exclude_job(RuleKind.FILE, row.path, self._home, device=row.device, inode=row.inode)
+            ).result()
+            self._services.feed.emit(Change(ChangeKind.RULES_CHANGED))
+            return ExcludeOutcome(True, rule_id=str(rule_id), kind="file", label=row.name)
+
+        return self._run_exclude(work, cb)
+
+    def exclude_folder(
+        self, image_id: int, *, cb: Callable[[ExcludeOutcome], None] | None = None
+    ) -> object:
+        """Exclude the image's whole directory (a ``FOLDER`` rule); every card under it leaves Browse."""
+
+        def work() -> ExcludeOutcome:
+            conn = self._services.read()
+            row = get_image(conn, image_id)
+            if row is None:
+                return ExcludeOutcome(False, kind="folder", message="image not found")
+            try:
+                validate_rule(RuleKind.FOLDER, row.dir)
+            except PatternError as error:
+                return ExcludeOutcome(False, kind="folder", message=error.reason)
+            rule_id = self._services.writer.submit(
+                _exclude_job(RuleKind.FOLDER, row.dir, self._home)
+            ).result()
+            self._services.feed.emit(Change(ChangeKind.RULES_CHANGED))
+            return ExcludeOutcome(True, rule_id=str(rule_id), kind="folder", label=row.dir)
+
+        return self._run_exclude(work, cb)
+
+    def undo_exclusion(
+        self, rule_id: str | int, *, cb: Callable[[ExcludeOutcome], None] | None = None
+    ) -> object:
+        """Remove the rule an exclude created and re-flag every row, so the excluded card(s) return."""
+        target = int(rule_id)
+
+        def work() -> ExcludeOutcome:
+            self._services.writer.submit(_undo_job(target, self._home)).result()
+            self._services.feed.emit(Change(ChangeKind.RULES_CHANGED))
+            return ExcludeOutcome(True, rule_id=str(target))
+
+        return self._run_exclude(work, cb)
+
+    def _run_exclude(
+        self, work: Callable[[], ExcludeOutcome], cb: Callable[[ExcludeOutcome], None] | None
+    ) -> object:
+        def done(result: ExcludeOutcome | None, error: BaseException | None) -> None:
+            if cb is None:
+                return
+            if error is not None or result is None:
+                cb(ExcludeOutcome(False, message=str(error) if error is not None else "failed"))
+                return
+            cb(result)
+
+        return run_in_worker(work, done, scheduler=self._scheduler)
+
     # -- internals --------------------------------------------------------------------------------------
 
     def _update(self, **changes: Any) -> object:
@@ -346,6 +445,33 @@ def _card(row: ImageRow) -> ImageCard:
         unusable=row.probe_status != "ok",
         has_thumb=row.thumb_key is not None and row.thumb_status == "ok",
     )
+
+
+def _reapply(conn: sqlite3.Connection, home: str) -> None:
+    """Recompute ``image.excluded_by`` for every row against the current rules — no rescan (D8)."""
+    rules, groups = load_rules(conn)
+    includes = [row["path"] for row in conn.execute("SELECT path FROM root WHERE enabled = 1")]
+    matcher = compile_matcher(rules, groups, includes=includes, home=home)
+    apply_exclusions(conn, matcher)
+
+
+def _exclude_job(
+    kind: RuleKind, value: str, home: str, *, device: int | None = None, inode: int | None = None
+) -> Callable[[sqlite3.Connection], int]:
+    def job(conn: sqlite3.Connection) -> int:
+        rule_id = add_rule(conn, kind, value, group=None, root=None, device=device, inode=inode)
+        _reapply(conn, home)
+        return rule_id
+
+    return job
+
+
+def _undo_job(rule_id: int, home: str) -> Callable[[sqlite3.Connection], None]:
+    def job(conn: sqlite3.Connection) -> None:
+        remove_rule(conn, rule_id)
+        _reapply(conn, home)
+
+    return job
 
 
 def _counts(raw: dict[str, int]) -> SegmentCounts:

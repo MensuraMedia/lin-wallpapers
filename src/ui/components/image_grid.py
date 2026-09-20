@@ -27,11 +27,13 @@ class ImageGrid(Gtk.Box):  # type: ignore[misc]
         load_thumb: Callable[[int, Callable[[Any], None]], Any],
         on_activate: Callable[[int], None] | None = None,
         on_need_more: Callable[[], None] | None = None,
+        on_context_menu: Callable[[Any, Any, float, float], None] | None = None,
     ) -> None:
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         self._load_thumb = load_thumb
         self._on_activate = on_activate
         self._on_need_more = on_need_more
+        self._on_context_menu = on_context_menu
         self._empty: Any = None
         compat.add_class(self, "image-grid")
 
@@ -56,7 +58,9 @@ class ImageGrid(Gtk.Box):  # type: ignore[misc]
         self._remove_empty()
         compat.clear_children(self._flow)
         for card in cards[:MAX_CARDS]:
-            self._flow.insert(ImageCard(card, self._load_thumb, self._on_activate), -1)
+            self._flow.insert(
+                ImageCard(card, self._load_thumb, self._on_activate, self._on_context_menu), -1
+            )
         compat.show(self._flow)
 
     def show_empty(self, widget: Any) -> None:
