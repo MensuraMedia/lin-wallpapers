@@ -51,6 +51,7 @@ DESKTOP_DEST="$APP_DIR/$APP_ID.desktop"
 
 SRC_SCALABLE="$SCRIPT_DIR/data/icons/hicolor/scalable/apps/$APP_ID.svg"
 SRC_SYMBOLIC="$SCRIPT_DIR/data/icons/hicolor/symbolic/apps/$APP_ID-symbolic.svg"
+SRC_ICON_ROOT="$SCRIPT_DIR/data/icons/hicolor"
 SRC_DESKTOP="$SCRIPT_DIR/data/$APP_ID.desktop"
 
 refresh_caches() {
@@ -95,11 +96,23 @@ do_install() {
     install -Dm644 "$SRC_SCALABLE" "$SCALABLE"
     install -Dm644 "$SRC_SYMBOLIC" "$SYMBOLIC"
 
-    if rasterize "$SRC_SCALABLE"; then
-        printf 'Rasterised PNG icons (%s).\n' "$ICON_SIZES"
+    # Prefer the PNGs shipped in the repo — reliable everywhere, including systems
+    # whose SVG pixbuf loader is broken/missing (the panel can't show an SVG there).
+    # Fall back to rasterising the SVG only if no PNGs are shipped.
+    installed_png=0
+    for size in $ICON_SIZES; do
+        src_png="$SRC_ICON_ROOT/${size}x${size}/apps/$APP_ID.png"
+        if [ -f "$src_png" ]; then
+            install -Dm644 "$src_png" "$ICON_ROOT/${size}x${size}/apps/$APP_ID.png"
+            installed_png=1
+        fi
+    done
+    if [ "$installed_png" -eq 1 ]; then
+        printf 'Installed PNG icons (%s).\n' "$ICON_SIZES"
+    elif rasterize "$SRC_SCALABLE"; then
+        printf 'Rasterised PNG icons from the SVG (%s).\n' "$ICON_SIZES"
     else
-        printf 'No SVG rasteriser found — installed the scalable icon only ' >&2
-        printf '(install librsvg2-bin, inkscape or imagemagick for PNGs).\n' >&2
+        printf 'No PNG icons shipped and no SVG rasteriser — scalable SVG only.\n' >&2
     fi
 
     tmp="$(mktemp)"
