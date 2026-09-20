@@ -1,0 +1,116 @@
+/* LinWallpaper — flat dark theme. All colours are tokens: re-theme in one place. */
+
+@define-color lw_bg        #1c1e24;
+@define-color lw_surface   #252932;
+@define-color lw_raised    #2e323d;
+@define-color lw_line      #363b47;
+@define-color lw_text      #eceef2;
+@define-color lw_dim       #9aa2b0;
+@define-color lw_accent    #3584e4;
+@define-color lw_accent2   #57a0f0;
+@define-color lw_on_accent #ffffff;
+@define-color lw_good      #33b679;
+
+window.linwallpaper,
+.lw-root { background-color: @lw_bg; color: @lw_text; }
+
+/* ---- sidebar ---- */
+.lw-sidebar {
+  background-color: @lw_surface;
+  border-right: 1px solid @lw_line;
+  padding: 16px 12px;
+}
+.lw-brand { padding: 6px 6px 14px 6px; }
+.lw-logo {
+  min-width: 34px; min-height: 34px;
+  border-radius: 11px;
+  background-image: linear-gradient(135deg, @lw_accent, @lw_accent2);
+  color: @lw_on_accent;
+}
+.lw-brand-name { font-size: 14px; font-weight: 800; }
+.lw-brand-sub { font-size: 9px; letter-spacing: 2px; color: @lw_dim; font-weight: 700; }
+
+.lw-nav button {
+  padding: 8px 10px;
+  border-radius: 9px;
+  color: @lw_dim;
+  font-size: 13px; font-weight: 600;
+  background: none; border: none; box-shadow: none;
+}
+.lw-nav button:hover { background-color: alpha(@lw_accent, 0.10); color: @lw_text; }
+.lw-nav button.selected {
+  background-color: alpha(@lw_accent, 0.16);
+  color: @lw_text;
+}
+
+.lw-foot {
+  background-color: @lw_raised;
+  border-radius: 11px;
+  padding: 10px 12px;
+}
+.lw-foot-title { font-size: 9px; letter-spacing: 1.4px; color: @lw_accent2; font-weight: 800; }
+.lw-foot-body { font-size: 11px; color: @lw_dim; }
+
+/* ---- content ---- */
+.lw-main { padding: 26px 30px; }
+.lw-h1 { font-size: 23px; font-weight: 800; }
+.lw-sub { font-size: 12px; color: @lw_dim; }
+
+.lw-card {
+  background-color: @lw_surface;
+  border: 1px solid @lw_line;
+  border-radius: 14px;
+}
+.lw-card-title { font-weight: 800; }
+
+.lw-preview {
+  background-color: @lw_raised;
+  border: 1px solid @lw_line;
+  border-radius: 14px;
+}
+
+.lw-chip {
+  background-color: @lw_raised;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-size: 11px; color: @lw_dim; font-weight: 600;
+}
+.lw-chip.good { color: @lw_good; background: none; padding-left: 0; }
+
+.lw-label { font-size: 11px; letter-spacing: 1.2px; color: @lw_dim; font-weight: 700; }
+
+/* segmented + toggle groups (Gtk linked box) */
+.lw-seg { background-color: @lw_raised; border-radius: 10px; padding: 3px; }
+.lw-seg button {
+  background: none; border: none; box-shadow: none;
+  color: @lw_dim; font-weight: 700; font-size: 12px;
+  padding: 6px 14px; border-radius: 8px; min-height: 0;
+}
+.lw-seg button:checked { background-color: @lw_accent; color: @lw_on_accent; }
+
+.lw-primary {
+  background-image: none;
+  background-color: @lw_accent; color: @lw_on_accent;
+  font-weight: 700; border-radius: 10px; padding: 9px 20px;
+}
+.lw-primary:hover { background-color: @lw_accent2; }
+.lw-ghost {
+  background-image: none;
+  background-color: @lw_raised; color: @lw_text;
+  font-weight: 700; border-radius: 10px; padding: 8px 16px;
+}
+
+.lw-screen-card {
+  background-color: @lw_surface;
+  border: 1px solid @lw_line;
+  border-radius: 14px;
+}
+.lw-screen-card.target { border-color: @lw_accent; }
+.lw-badge {
+  background-color: alpha(@lw_accent, 0.20);
+  color: @lw_accent2;
+  border-radius: 6px; padding: 1px 7px;
+  font-size: 9px; font-weight: 800; letter-spacing: 1px;
+}
+.lw-mono { font-family: monospace; }
+.dim { color: @lw_dim; }
