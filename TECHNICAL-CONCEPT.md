@@ -31,9 +31,12 @@ a product.**
 Lin Wallpapers:
 
 1. **Finds** every image on the machine that could work as a wallpaper — across home folders, extra
-   partitions, external drives and system wallpaper directories — without the user hunting through folders.
+   partitions, external drives and system wallpaper directories — without the user hunting through folders,
+   and with folders, files and groups of both excludable from the search (§5.1).
 2. **Catalogues** them with dimensions, aspect ratio, format, dominant colors, a suitability score and a
-   thumbnail, in a local index that survives restarts and refreshes incrementally.
+   thumbnail, in a local index that survives restarts and refreshes incrementally — and **measures this
+   desktop's own displays** at every scan (§5.2), so the images whose dimensions fit are gathered into an
+   **ideal-images segment** (§6.1).
 3. **Browses and previews** them in a fast image browser with a large preview and per-surface simulations
    (what it looks like *as* a boot splash, *as* a login screen, and so on).
 4. **Applies** one image to any single surface or to all of them at once, transactionally, with a backup of
@@ -203,20 +206,98 @@ switchable in Settings:
 | Network mounts | off | `nfs`, `cifs`, `sshfs`, `fuse.*` are excluded by default (latency and quota); opt-in per mount |
 | Extra folders | — | Added by the user; also accepted via drag-and-drop onto the browser |
 
-**Exclusions** are applied before `stat`: pseudo-filesystems (`/proc`, `/sys`, `/dev`, `/run`), snapshots and
-backups (`/timeshift`, `.snapshots`, `.Trash*`), caches (`~/.cache`, `.thumbnails`), VCS and build dirs,
-`node_modules`, Steam/Proton library trees (thousands of textures), and anything matching the user's
-ignore globs. Symlinks are not followed across filesystem boundaries; hardlink/inode identity stops
-double-counting bind mounts.
+**Exclusions** are applied before `stat`, and the user controls them: single folders, single files, and
+groups of folders and files can all be excluded (§5.1). Symlinks are not followed across filesystem
+boundaries; hardlink/inode identity stops double-counting bind mounts.
 
 **Two-phase scan.** Phase 1 walks with `os.scandir` and keeps only candidates by extension and size
-(default: ≥ 200 KB, ≥ 1280 px on the long edge once probed). Phase 2 probes each candidate. Phase 1 is
+(default: ≥ 64 KiB, ≥ 1280 px on the long edge once probed — smaller images are stored but hidden by a removable default filter). Phase 2 probes each candidate. Phase 1 is
 cheap enough to report progress per directory; phase 2 is the expensive one and is what the progress bar
 actually tracks.
 
 **Incremental rescan** uses `(device, inode, mtime, size)`: unchanged files are skipped entirely. A full
 rescan of a 40,000-image tree is minutes; a rescan after adding a folder is seconds. Optional `inotify`
 watches on a handful of chosen folders pick up new screenshots and downloads live.
+
+### 5.1 Exclusions: folders, files, and groups of both
+
+The scan searches wherever its roots point, so the user must be able to say *not there* and *not that* —
+precisely, reversibly, and at three levels of granularity:
+
+| Kind | What it excludes | How it is created | Example |
+| --- | --- | --- | --- |
+| **Folder** | One directory and everything beneath it | Sources → Exclusions → *Add folder*; right-click a folder chip or any image → *Exclude this folder*; drag a folder onto the exclusions list | `/data/photos/scans-2009` |
+| **File** | One image, by path (and by `(device, inode)`, so a rename doesn't bring it back) | Right-click an image in Browse or on the Image page → *Exclude this image* | `~/Pictures/id-card.jpg` |
+| **Pattern** | Every folder or file matching a glob, anywhere under the roots or under one root | Sources → Exclusions → *Add pattern*, with a live "this would exclude N images in M folders" count | `**/thumbs/**`, `*.screenshot.png`, `IMG_E*.jpg` |
+| **Group** | A named, switchable set of folder, file and pattern rules — excluded or re-included as one unit | Built-in groups ship with the app; the user creates their own and can add any rule to one | *Game libraries*, *Work documents*, *Phone backups* |
+
+**Built-in groups** replace what used to be a hard-coded list, so every default is visible, explainable and
+can be switched off by someone who genuinely wants those images:
+
+| Group | Default | Rules |
+| --- | --- | --- |
+| System and pseudo-filesystems | on, locked | `/proc`, `/sys`, `/dev`, `/run`, `/snap`, `/var/lib` — never useful, never scannable |
+| Snapshots, backups and trash | on | `/timeshift`, `**/.snapshots/**`, `**/.Trash*/**`, `**/lost+found/**` |
+| Caches and thumbnails | on | `~/.cache`, `**/.thumbnails/**`, `**/cache/**`, browser profiles |
+| Code and build trees | on | `**/.git/**`, `**/node_modules/**`, `**/.venv/**`, `**/build/**`, `**/dist/**`, `**/target/**` |
+| Game libraries | on | Steam/Proton/Lutris/Heroic library trees (thousands of textures) |
+| Icons, emoji and UI assets | on | `**/icons/**`, `**/emoji/**`, `**/sprites/**`, `**/textures/**`, `/usr/share/icons`, `/usr/share/pixmaps` |
+| Application data | on | `~/.local/share` except `backgrounds/`, `~/.config`, `~/.var`, `~/snap` |
+
+Rules of the mechanism:
+
+1. **Evaluated before `stat`.** An excluded directory is never descended into; an excluded file is never
+   opened. Exclusions make a scan faster, not just quieter.
+2. **Precedence is explicit.** File rule › folder rule › pattern rule; within a level, an *include* override
+   (a root or folder the user explicitly added) beats a group default — so adding
+   `~/Games/wallpaper-pack` as a root works even though *Game libraries* is on. The winning rule is recorded.
+3. **Never silent.** Every skip is counted per rule and listed in Sources ("skipped: 4,212 files — group
+   *Game libraries*, rule `**/steamapps/**`"). The same rule id is written to the activity log (§15.3).
+4. **Reversible and non-destructive.** Excluding never deletes a file, and never deletes a catalogue row: rows
+   already catalogued are flagged `excluded_by = <rule id>` and leave Browse, collections and the ideal set
+   (§6.1) immediately — no rescan needed. Removing the rule brings them back just as fast, with their
+   thumbnails, score and tags intact.
+5. **An image that is currently applied cannot disappear unnoticed.** Excluding it keeps it in History and on
+   the Screens page, marked "excluded from the catalogue".
+6. **Portable.** Rules under a removable volume are stored relative to the volume UUID, so they follow the
+   drive to another mount point. Rules export and import with the settings, and
+   `linwp exclude add|remove|list|test <path>` manages them headlessly (`test` answers "would this path be
+   scanned, and if not, which rule excludes it?").
+7. **Bounded.** Patterns are globs (`*`, `?`, `**`, character classes), not regular expressions — no
+   catastrophic backtracking on a million-file tree, and nothing the user has to debug.
+
+### 5.2 Display detection: the scan measures this desktop first
+
+"Suitable" has no meaning without a screen to be suitable *for*, so **every scan begins by reading the
+dimensions of the local desktop**, and what it finds is stored with the scan.
+
+| Source (first that answers) | Used by | What it yields |
+| --- | --- | --- |
+| `Gdk.Display` / `Gdk.Monitor` — geometry × scale factor, per monitor, primary flag, connector and model | the GUI (X11 and Wayland) | Physical pixels per output, e.g. `eDP-1 1920×1080 @1x primary` |
+| DRM sysfs — `/sys/class/drm/card*-*/status` = `connected`, first line of `modes` | `linwp`, headless and TTY runs; the helper (M5) for the splash and boot-menu geometry | The native (preferred) mode per connected connector, no display server needed |
+| `xrandr --current` / `wlr-randr` / `kscreen-doctor -o` where present | fallback for unusual setups | Current mode per output |
+| `--display WxH[,WxH…]` on the CLI, or *Settings → Displays → Add a display I don't have connected* | the user | A declared target — "also judge for my 4K monitor at the office" |
+
+The services never import GTK (§17.3), so detection is an injected interface — `DisplayProbe` in
+`scanner/displays.py` — with the GDK implementation living on the GUI side and the sysfs/CLI implementations
+in the service layer. All of them return the same `Display(name, width, height, scale, primary, source)`.
+
+What the scan does with it:
+
+1. **Snapshot.** The detected outputs are written to the `display` table and referenced by the scan
+   (`scan.display_set`), so every suitability verdict can say *which* screens it was judged against.
+2. **Physical pixels, not logical.** A 3840 × 2160 panel at 2× scaling is a 3840 × 2160 target — a 1920-wide
+   image is upscaled on it, whatever the desktop calls its logical size.
+3. **Rotation respected.** A portrait-rotated monitor is a portrait target: 1080 × 1920 images are ideal *for
+   that output*, and the UI says so rather than penalising them as "phone shots".
+4. **The target set** is every connected output plus any declared display. The *primary* output drives the
+   default sort and the privileged surfaces (greeter, splash and boot menu render at one geometry).
+5. **Change detection.** Docking, an external monitor, a resolution or scaling change is noticed (GDK
+   `monitors-changed`, or a differing snapshot at the next scan). Because membership of the ideal set and the
+   resolution/aspect score components are computed from *stored* image dimensions, a display change
+   re-evaluates the whole catalogue in well under a second **without touching a single image file**.
+6. **Nothing detected** (SSH session, container) → reason code `DISPLAY_NOT_DETECTED`: the scan still
+   catalogues everything, the ideal set stays empty and says why, and `--display` is named as the remedy.
 
 ---
 
@@ -240,6 +321,51 @@ behind a "3 copies" chip.
 The score orders the browser by default and never *hides* anything — the filter bar does that, and every
 filter is a saved query.
 
+### 6.1 The ideal-images segment
+
+Scoring answers "how good?"; most people first want the simpler answer: **"which of these actually fit my
+screen?"** Every image whose *dimensions* make it a suitable desktop wallpaper for the detected displays
+(§5.2) is added automatically to a built-in segment, **Ideal for this desktop** — the first thing Browse
+offers, its own entry on the Collections page, and `linwp list --ideal`.
+
+Membership is decided on dimensions alone, so it is available the moment an image has been probed — during
+the first scan, before any analysis or scoring has run:
+
+| Test (against one display `W × H`, physical pixels) | Default | Why |
+| --- | --- | --- |
+| **Covers the screen:** `width ≥ W` and `height ≥ H` after EXIF rotation | required | No upscaling, ever. An image that must be enlarged is not ideal, however pretty |
+| **Fits without losing the picture:** in `fill` mode the centre crop discards ≤ 16 % of the image area (`1 − min(wH, Wh) / max(wH, Wh)`) | 16 % (adjustable 0–40 %) | A 16:10 (10 %) or 3:2 (15.6 %) photo on a 16:9 panel passes; 4:3 (25 %), 1:1 and 9:16 do not |
+| **Same orientation** as the display | required | Portrait images are ideal only for portrait-rotated outputs |
+| **Decodable, still, opaque:** not truncated, not animated, no alpha channel | required | The integrity facts from the probe, nothing subjective |
+| **Not excluded** (§5.1) and not `missing` | required | Excluded and offline images are never offered |
+
+An image is recorded **per display** it is ideal for (`ideal_for`), which gives the segment its sub-groups:
+
+| Sub-segment | Meaning |
+| --- | --- |
+| **Ideal for every display** | passes for all connected outputs — the safe pick for *Apply everywhere* |
+| **Ideal for `<output>`** (one per display, e.g. "eDP-1 · 1920 × 1080") | passes for that output; the basis of per-monitor wallpapers (M7) |
+| **Exact match** | `width × height` equals the display's — shown as a `native` badge, sorted first |
+| **Larger than needed** | covers the screen with room to spare (`4K` on a 1080p panel) — ideal now, and still ideal after a monitor upgrade |
+| **Near misses** | fails one test narrowly (covers ≥ 90 % of the width and height, or crops ≤ 25 %) — *not* in the segment, but one click away, each naming the test it failed |
+
+Properties of the segment:
+
+- **It is a segment, not a copy.** Nothing is moved or duplicated on disk; membership is a row in
+  `ideal_image`, maintained by the catalogue.
+- **Automatic and live.** Images join as the scan probes them (the count climbs in the scan banner:
+  "830 probed · 212 ideal for this desktop"), leave when they are excluded, deleted or go offline, and the
+  whole segment is recomputed when the displays change — from stored dimensions, with no file I/O.
+- **Explainable.** Every member can say why it is in ("3840 × 2160 covers 1920 × 1080; fill crop loses
+  0 %"), and every near miss why it is out ("1760 × 990 — 8 % too small for eDP-1").
+- **User-correctable.** *Remove from ideal* pins an image out (it stays in the catalogue); *Add to ideal
+  anyway* pins one in, marked as a manual choice. Pins survive rescans and display changes.
+- **Dimensions first, judgement second.** From M2 the segment is *ordered* by suitability score and can be
+  narrowed by `text-safe`, `dark`/`light` and `hide duplicates`; the score never removes a member, and a
+  high score never admits an image that fails the dimension tests.
+- **Desktop first, other screens for free.** The login screen, boot splash and boot menu render at the
+  primary output's geometry, so "ideal for the primary display" is also the right candidate list for them.
+
 ---
 
 ## 7. Catalogue: data model
@@ -258,7 +384,8 @@ CREATE TABLE image (
   palette TEXT,                     -- JSON: dominant colors + luminance + contrast
   dhash INTEGER,                    -- perceptual hash
   thumb_key TEXT,                   -- content hash → thumbnail file
-  first_seen INTEGER, last_seen INTEGER, missing INTEGER DEFAULT 0
+  first_seen INTEGER, last_seen INTEGER, missing INTEGER DEFAULT 0,
+  excluded_by INTEGER               -- exclusion.id when a §5.1 rule matches; NULL otherwise
 );
 CREATE TABLE collection(id INTEGER PRIMARY KEY, name TEXT UNIQUE, kind TEXT); -- manual | smart
 CREATE TABLE collection_item(collection_id INTEGER, image_id INTEGER, position INTEGER);
@@ -269,7 +396,51 @@ CREATE TABLE apply_event(                     -- history and undo
   options TEXT, backup_ref TEXT, result TEXT, message TEXT
 );
 CREATE TABLE root(id INTEGER PRIMARY KEY, path TEXT UNIQUE, enabled INTEGER, kind TEXT, last_scan INTEGER);
+
+-- §5.1 exclusions: folders, files, patterns, and the groups that switch sets of them
+CREATE TABLE exclusion_group(
+  id INTEGER PRIMARY KEY, name TEXT UNIQUE, builtin INTEGER, locked INTEGER, enabled INTEGER
+);
+CREATE TABLE exclusion(
+  id INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL,               -- folder | file | pattern
+  value TEXT NOT NULL,              -- absolute path, or a glob
+  volume_id TEXT,                   -- set when the rule lives on a removable volume (value is then relative)
+  device INTEGER, inode INTEGER,    -- file rules: survive a rename
+  root_id INTEGER,                  -- NULL = applies under every root
+  group_id INTEGER,                 -- NULL = a stand-alone rule
+  enabled INTEGER DEFAULT 1, created INTEGER, note TEXT,
+  UNIQUE(kind, value, volume_id, root_id)
+);
+-- image.excluded_by → exclusion.id : set when a rule matches an already-catalogued row (never deleted)
+
+-- §5.2 displays measured at scan time, and declared by the user
+CREATE TABLE display(
+  id INTEGER PRIMARY KEY, name TEXT,          -- connector: eDP-1, HDMI-A-1, or a user label
+  width INTEGER, height INTEGER,              -- physical pixels, after rotation
+  scale REAL, is_primary INTEGER,
+  source TEXT,                                -- gdk | drm | xrandr | declared
+  connected INTEGER, first_seen INTEGER, last_seen INTEGER
+);
+CREATE TABLE scan(
+  id INTEGER PRIMARY KEY, started INTEGER, finished INTEGER, root_ids TEXT,
+  display_set TEXT,                           -- JSON: the display ids + geometry this scan judged against
+  found INTEGER, probed INTEGER, ideal INTEGER, skipped INTEGER, result TEXT
+);
+
+-- §6.1 the ideal-images segment: one row per (image, display) that passes the dimension tests
+CREATE TABLE ideal_image(
+  image_id INTEGER NOT NULL, display_id INTEGER NOT NULL,
+  exact INTEGER,                    -- width × height equals the display
+  crop_loss REAL,                   -- fraction of the image area discarded by a fill crop
+  PRIMARY KEY (image_id, display_id)
+);
+CREATE TABLE ideal_pin(image_id INTEGER PRIMARY KEY, pinned TEXT);  -- 'in' | 'out' — manual corrections
 ```
+
+`ideal_image` is derived data: it is rebuilt by one `INSERT … SELECT` over `image × display` whenever the
+display set, the crop-loss threshold or the exclusions change, which is why a monitor change never re-reads
+a file.
 
 Thumbnails follow the freedesktop thumbnail spec layout in
 `~/.cache/lin-wallpapers/thumbnails/{normal,large}/`, keyed by a content hash so moving a file doesn't
@@ -439,19 +610,20 @@ subclasses, route keys registered in the content area, sidebar `nav_items` tuple
 
 ```
 lin-wallpapers/
-├── run.sh                       # venv + deps + launch (from the template)
+├── run.sh · Makefile · pyproject.toml   # venv + resource/schema build + launch · `make check` · tool config
 ├── src/
 │   ├── main.py                  # Gtk.Application entry point
 │   ├── gtk_version.py           # the ONE place GTK 3/4 is chosen
 │   ├── config/                  # config_theme.py · config_layout.py · config_themes.py · config_paths.py
-│   ├── ui/                      # dashboard_window.py · sidebar.py · content_area.py · compat.py
+│   ├── ui/                      # dashboard_window.py · sidebar.py · content_area.py · compat.py · window_state.py
 │   │   └── components/          # image_card · filter_bar · preview_pane · surface_tile · crop_handle · apply_sheet
+│   ├── modules/                 # manager_navigation.py · manager_theme_applicator.py (starter-template managers)
 │   ├── capability/              # states.py · reasons.py (the §15.2 catalogue) · messages.py
-│   ├── pages/                   # page_base.py · page_browse · page_image · page_screens · page_apply · page_diagnostics
+│   ├── pages/                   # page_base.py · page_browse · page_image · page_screens · page_preview · page_apply · page_diagnostics
 │   │                            # page_sources · page_collections · page_history · page_settings · page_about
 │   ├── viewmodels/              # browse_vm · image_vm · screens_vm · apply_vm (no GTK imports below this line)
-│   ├── scanner/                 # roots.py · walker.py · probe.py · score.py · hash.py · watch.py
-│   ├── catalogue/               # db.py · schema.sql · queries.py · thumbs.py · collections.py
+│   ├── scanner/                 # roots.py · exclude.py · displays.py · walker.py · probe.py · score.py · hash.py · watch.py
+│   ├── catalogue/               # db.py · schema.sql · queries.py · thumbs.py · collections.py · ideal.py
 │   ├── imaging/                 # transform.py · formats.py · palette.py · grub_png.py
 │   ├── preview/                 # compositor.py · surfaces/*.py (one mock per surface)
 │   ├── apply/                   # planner.py · executor.py · backup.py · verify.py · registry.py
@@ -463,14 +635,16 @@ lin-wallpapers/
 │   ├── cli/                     # linwp.py
 │   └── util/                    # threads.py · log.py · errors.py · units.py
 ├── resources/                   # css/ · icons/ · fonts/ · plymouth-template/ (script theme skeleton)
-├── data/                        # .desktop · AppStream metainfo · polkit actions (no service units)
+├── tools/                       # gtk4_lint.py
+├── data/                        # GSettings schema · .desktop · AppStream metainfo · polkit actions (no service units)
 ├── reference/                   # THE BASE SCRIPT: apply-08-screen-wallpaper.sh + plymouth theme + grub drop-in
 ├── docs/                        # this document, README, mockups, specs
 ├── tests/                       # unit · golden-image · fake-root integration
 └── debian/                      # packaging
 ```
 
-**Pages** (sidebar routes): `browse`, `image`, `screens`, `sources`, `collections`, `history`, `settings`, `about`.
+**Pages:** eight sidebar routes — `browse`, `image`, `screens`, `preview`, `sources`, `collections`, `history`,
+`settings` — plus `about` and (from M6) `diagnostics`, which are opened from Settings; `apply` is a sheet, not a route.
 
 ---
 
@@ -481,11 +655,11 @@ buttons and a scan-status footer; content area on the right.
 
 | Page | What it shows | Key interactions |
 | --- | --- | --- |
-| **Browse** (default) | Virtualized grid of image cards (thumbnail, filename, resolution chip, score ring, badges). Filter bar: search, min-resolution, aspect, orientation, color, text-safe, duplicates, source. Sort by score, size, date, name, color. | Click = select; double-click = Image page; `Space` = quick preview; drag onto a surface tile = apply to that surface |
+| **Browse** (default) | Segment switch at the top — **Ideal for this desktop** (§6.1, with its per-display sub-segments and the detected dimensions shown) · All images · Near misses. Virtualized grid of image cards (thumbnail, filename, resolution chip, score ring, badges). Filter bar: search, min-resolution, aspect, orientation, color, text-safe, duplicates, source. Sort by score, size, date, name, color. | Click = select; double-click = Image page; `Space` = quick preview; drag onto a surface tile = apply to that surface; right-click = Exclude this image / Exclude this folder / Remove from ideal |
 | **Image** | Large preview with the crop/fit control, full metadata, palette swatches, badges with tooltips explaining the score, and the five surface tiles down the right side with "currently set here" markers | Fit mode, focal point, Apply to… , Add to collection, Show in Files |
 | **Screens** | The five surfaces as large cards: current image, mechanism, capability state ("supported", "needs authorization", "unavailable: reason"), last applied, Preview and Revert | Per-surface apply, per-surface revert, "Apply everywhere", sync switch |
-| **Sources** | Scan roots with type, image count, last scan and a progress row while scanning; add folder; per-volume toggles; exclusions editor | Scan now, rescan, remove, enable/disable |
-| **Collections** | Manual collections and smart collections (saved filters) | New, rename, reorder, set as slideshow source |
+| **Sources** | Scan roots with type, image count, last scan and a progress row while scanning; add folder; per-volume toggles. **Exclusions** panel (§5.1): folder, file and pattern rules, the built-in and user groups with their switches, a per-rule skipped count, and a live "this would exclude N images" preview. **Displays** strip (§5.2): the outputs the last scan measured, plus declared displays | Scan now, rescan, remove, enable/disable; add/remove/toggle an exclusion or a whole group; test a path; add a declared display |
+| **Collections** | The built-in **Ideal for this desktop** segment and its sub-segments (§6.1), then manual collections and smart collections (saved filters) | New, rename, reorder, set as slideshow source |
 | **History** | Apply events: time, image thumbnail, surfaces, result, backup reference | Undo, re-apply, open backup manifest |
 | **Settings** | Scan policy, thumbnail cache size, default fit mode, sync behavior, polkit rule state, GRUB/Plymouth options, logging | Clear cache, rebuild catalogue, export/import settings |
 | **Diagnostics** (from Settings, and from every "Why?" popover) | The activity log (§15.3) filtered by area, level and session; the capability table with each feature's state, reason code and evidence; the machine model | Filter, jump to the lines explaining a greyed-out control, Copy diagnostics bundle |
@@ -552,6 +726,7 @@ the same thing, and a new provider cannot invent a new way of saying "no".
 | `INSUFFICIENT_SPACE` | Temporarily unavailable | "{Path} has {free} free; this needs about {needed}." |
 | `PACKAGE_MANAGER_BUSY` | Temporarily unavailable | "A package operation is running; changing boot files now isn't safe." |
 | `VOLUME_OFFLINE` | Temporarily unavailable | "The drive {label} holding this image isn't connected." |
+| `DISPLAY_NOT_DETECTED` | Partly supported | "No display could be measured in this session ({evidence}), so images can't be matched to a screen. Declare one with `--display 1920x1080` or in Settings → Displays." |
 | `LOADER_MISSING` | Partly supported | "This system has no loader for {format}; those images are listed but can't be used." |
 | `PER_MONITOR_UNSUPPORTED` | Partly supported | "{Desktop} sets one wallpaper for all monitors." |
 | `PROVIDER_ERROR` | Something went wrong | "{Component} failed unexpectedly: {summary}. The rest of the app is unaffected." |
@@ -602,7 +777,7 @@ neutral gray text, a single saturated yellow accent on small surfaces (icons, ch
 | `--ok` `--warn` `--danger` | `#4ADE80` `#FFB500` `#EF4444` | Status (red is red, never pink) |
 
 Rules: one accent, used sparingly; gradients only on the accent and on the score ring; 12/16 px radii;
-8 px spacing grid; Inter/Manrope-style UI font at 13–15 px with tabular numerals for dimensions;
+8 px spacing grid; the Ubuntu font family (Ubuntu, Ubuntu Mono) at 13–15 px, tabular numerals for dimensions;
 thumbnails get a 1 px inner stroke so light images don't bleed into the surface; **the image is the
 color** — chrome stays neutral behind it. Motion: 120–180 ms ease-out for state, a 240 ms cross-fade for
 preview switches, no motion during apply (progress is literal).
@@ -725,7 +900,7 @@ universal files are immutable; project-specific pieces go alongside them):
 `lin-wallpapers-helper` (the one-shot privileged helper and its polkit actions — no service units, nothing
 enabled at install time; `postinst` starts nothing). Ships `.desktop`, AppStream
 metainfo, symbolic icons and a GResource bundle. Runtime deps:
-`python3-gi gir1.2-gtk-3.0 python3-gi-cairo python3-pil gir1.2-gdkpixbuf-2.0 polkitd dbus`; recommends
+`python3-gi gir1.2-gtk-3.0 python3-gi-cairo python3-pil gir1.2-gdkpixbuf-2.0 polkitd pkexec dbus`; recommends
 `plymouth grub2-common`. Nothing in the dependency list or the maintainer scripts is distribution-specific:
 the same two packages install on Mint, Ubuntu and its flavours, Debian, Pop!_OS, Zorin, MX and elementary,
 and the providers sort out the differences at runtime (§4.2). Flatpak is deliberately out of scope for v1 — the privileged surfaces need host
@@ -765,6 +940,8 @@ memory < 250 MB with a 20,000-image catalogue; idle CPU 0 % (no polling, watches
 | `/boot` too small for another initramfs | Precheck free space; refuse rather than half-write |
 | GRUB can't decode the background | Conservative 8-bit PNG profile, decode test before install |
 | Greeter shows grey because the image is unreadable | The copy-to-system-path step is part of the plan, and verification re-reads the file as the greeter user |
+| The scan reads the wrong screen size (HiDPI scaling, rotation, headless run) and the ideal set is wrong | Physical pixels from GDK geometry × scale, DRM sysfs as the display-server-free source, rotation applied, the measured displays shown in the UI, a declared-display override, and `DISPLAY_NOT_DETECTED` instead of a guess (§5.2) |
+| An exclusion hides images the user wanted, or a default group surprises them | Every skip is counted and attributed to a rule; defaults are visible groups with switches; explicit includes beat group defaults; exclusions never delete rows or files and undo instantly (§5.1) |
 | Scanning a huge or network tree stalls the app | Bounded queues, exclusions by default, cancellable, network mounts opt-in |
 | Package upgrades overwrite changed conffiles | Drop-ins only; the app never edits a package conffile |
 | Desktop-environment drift across releases | Probes and providers, plus a machine-profile dump command for bug reports |

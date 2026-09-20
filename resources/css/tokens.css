@@ -1,0 +1,16 @@
+/* Lin Wallpapers design tokens — the ONLY file that may contain a color value.
+ * Palette: universal-themes/image-reference/ui-kit-yellow-gray-yello.jpg (TECHNICAL-CONCEPT §16).
+ * Dark navy-charcoal surfaces, neutral gray text, one saturated yellow accent. */
+
+@define-color bg-base    #1E2233;               /* window background */
+@define-color bg-surface #252A3E;               /* cards, sidebar */
+@define-color bg-raised  #2B3044;               /* popovers, hovered cards, inputs */
+@define-color stroke     rgba(255,255,255,0.08); /* hairlines, card borders */
+@define-color text       #F2F3F7;               /* primary text */
+@define-color text-dim   #8A8E9E;               /* secondary text, metadata */
+@define-color accent     #FFC700;               /* primary action, selection, focus ring */
+@define-color accent-2   #FFB500;               /* gradient end, hover */
+@define-color on-accent  #1A1400;               /* text on yellow */
+@define-color ok         #4ADE80;
+@define-color warn       #FFB500;
+@define-color danger     #EF4444;               /* red is red, never pink */

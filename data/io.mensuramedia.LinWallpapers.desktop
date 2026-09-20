@@ -1,0 +1,14 @@
+[Desktop Entry]
+# Exec is rewritten by install.sh to the chosen launcher (default: the repo's run.sh).
+Type=Application
+Version=1.0
+Name=Lin Wallpapers
+GenericName=Wallpaper Manager
+Comment=One wallpaper for every screen — desktop, lock, login, splash and boot menu
+Icon=io.mensuramedia.LinWallpapers
+Exec=lin-wallpapers
+Terminal=false
+Categories=Settings;DesktopSettings;GTK;
+Keywords=wallpaper;background;desktop;lock screen;login;
+StartupNotify=true
+StartupWMClass=io.mensuramedia.LinWallpapers

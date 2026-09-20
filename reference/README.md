@@ -11,7 +11,7 @@ the same fallbacks and the same undo — with a catalogue, previews, backups and
 
 | File | What it is |
 | --- | --- |
-| `apply-08-screen-wallpaper.sh` | The script, verbatim as applied (173 lines, root, idempotent, `--undo`) |
+| `apply-08-screen-wallpaper.sh` | The script, verbatim as applied (173 lines plus the theme and drop-in beside it, root, idempotent, `--undo`) |
 | `plymouth-theme/fx506li-wallpaper.plymouth` | Theme manifest (`ModuleName=script`) — the template the app generates per install |
 | `plymouth-theme/fx506li-wallpaper.script` | Plymouth script: cover-scaled background sprite at z = −100, 30 throbber frames at 75 % height, password/question/message callbacks |
 | `grub.d/99-fx506li-background.cfg` | The GRUB drop-in: `GRUB_BACKGROUND` + `GRUB_GFXMODE` (never `/etc/default/grub`, a package conffile) |
@@ -33,7 +33,7 @@ Names carrying the reference machine (`fx506li`, `/usr/share/backgrounds/fx506li
 | 6 | **Lock screen** | Nothing — cinnamon-screensaver already draws the desktop background | `apply/providers/lock_cinnamon.probe()` | The app states this in the UI instead of leaving it implicit, and only writes an override when the user wants a *different* lock image |
 | 7 | **Backups** | `backup()` copies each file it is about to touch into `/var/backups/fx506li/<timestamp>/` | `apply/backup.py` | Same location pattern (`/var/backups/lin-wallpapers/<timestamp>/`), plus a JSON manifest with modes, owners, sha256 and the previous `update-alternatives` selection, so undo is data rather than memory |
 | 8 | **Undo** | `--undo`: `update-alternatives --set` back to `mint-logo`, remove the theme dir, `del_ini` the greeter keys, remove the GRUB image and drop-in, `update-initramfs -u -k all`, `update-grub` | `apply/providers/*.revert()`, `cli: linwp undo`, History page | The script's undo is per-surface and complete; the app replays it from the backup manifest of a specific apply event |
-| 9 | **Preview** | `--preview`: `plymouthd` + `plymouth --show-splash`, 8 s, `plymouth quit` | `preview/surfaces/splash_plymouth.py` ("Run the real splash") | Kept verbatim as the *live check* offered after an apply; the five in-app previews are the Cairo mock-ups that come before it |
+| 9 | **Preview** | `--preview`: `plymouthd` + `plymouth --show-splash`, 8 s, `plymouth quit` | `preview/surfaces/splash.py` ("Run the real splash") | Kept verbatim as the *live check* offered after an apply; the five in-app previews are the Cairo mock-ups that come before it |
 | 10 | **Report** | Prints the greeter background, the resolved `default.plymouth` and the count of theme references in `grub.cfg` | `apply/verify.py`, `linwp doctor` | Verification is promoted from "printed at the end" to "checked before commit", and gains the initramfs content check (`lsinitramfs \| grep`) that was done by hand after this script ran |
 
 ## Design rules inherited from the script (non-negotiable in the app)

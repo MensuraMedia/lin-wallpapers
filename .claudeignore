@@ -1,0 +1,13 @@
+.venv/
+venv/
+build/
+dist/
+__pycache__/
+*.egg-info/
+.mypy_cache/
+.ruff_cache/
+.pytest_cache/
+htmlcov/
+docs/mockups/png/
+*.gresource
+*.db

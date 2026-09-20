@@ -38,5 +38,5 @@ Ubuntu/Cantarell fallback rather than Manrope.
 
 - **Format:** Design Component HTML (`.dc.html`) with an index in `canvas.json`; viewable on the project's
   private design canvas. Visual reference for M0–M5, not production code (the app is GTK + Cairo).
-- **Fonts:** Manrope, with inline stroke icons standing in for the planned symbolic set.
+- **Fonts:** the app uses the Ubuntu family (Ubuntu, Ubuntu Mono); the HTML names Manrope first, the PNGs render in Ubuntu.
 - The "photographs" in the mockups are drawn with gradients and SVG silhouettes — placeholders for real images.

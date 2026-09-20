@@ -1,0 +1,198 @@
+/* Lin Wallpapers component classes. Colors come from tokens.css only: no hex, no rgb() here,
+ * no -gtk-gradient, no override_* in code. 8 px grid, 12/16 px radii. */
+
+/* The font stacks are not here: config_theme.Fonts is their single source and the theme applicator
+ * loads the generated rules (`*` and `.mono`) ahead of this file. 13 px base as in the mockups. */
+
+.tabular {
+    font-feature-settings: "tnum";
+}
+
+window {
+    font-size: 13px;
+}
+
+window,
+.content-area {
+    background-color: @bg-base;
+    color: @text;
+}
+
+label {
+    color: @text;
+}
+
+.dim {
+    color: @text-dim;
+}
+
+*:focus {
+    outline-color: @accent;
+    outline-style: solid;
+    outline-width: 2px;
+    outline-offset: -2px;
+}
+
+/* Labels tracked by 1 px or more take their text from compat.tracked() (GTK 3 measuring quirk). */
+
+/* ── Sidebar (docs/mockups/Sidebar.dc.html) ──────────────────────────────── */
+
+/* The right hairline is an inset shadow, not a border: GTK 3 does not paint a box's background under
+ * its border, so a translucent border shows the window behind it instead of the sidebar's surface.
+ * `border: none` also drops the desktop theme's own `.sidebar` border. The 13th pixel of right
+ * padding is the hairline's. */
+.sidebar {
+    background-color: @bg-surface;
+    border: none;
+    box-shadow: inset -1px 0 0 0 @stroke;
+    padding: 16px 13px 16px 12px;
+}
+
+.logo-name {
+    font-weight: 800;
+    font-size: 13px;
+    color: @text;
+}
+
+.logo-tagline {
+    font-weight: 700; /* the mockup's 600 has no instance in the Ubuntu variable font and renders undersized */
+    font-size: 10px;
+    letter-spacing: 1.2px;
+    margin-top: -2px; /* GTK line boxes are 2 px taller than the mockup's; keeps the nav at y=117 */
+    color: @text-dim;
+}
+
+.nav-button {
+    background-image: none;
+    background-color: transparent;
+    border: none;
+    box-shadow: none;
+    text-shadow: none;
+    -gtk-icon-shadow: none;
+    border-radius: 8px;
+    padding: 0 9px;
+    margin: 0;
+    min-height: 28px;
+    min-width: 0;
+    color: mix(@text, @text-dim, 0.4);
+    font-size: 12.5px;
+    font-weight: 600;
+}
+
+.nav-button label,
+.nav-button image,
+.nav-button .nav-glyph {
+    color: inherit;
+}
+
+.nav-button:hover {
+    background-color: @bg-raised;
+    color: @text;
+}
+
+.nav-button.active,
+.nav-button.active:hover {
+    background-color: alpha(@accent, 0.14);
+    color: @accent;
+    font-weight: 700;
+}
+
+.machine-panel {
+    background-color: @bg-raised;
+    border-radius: 10px;
+    padding: 10px;
+}
+
+.machine-panel .eyebrow {
+    font-size: 10px;
+    letter-spacing: 1px; /* mockup 0.07em; GTK 3 ignores sub-pixel tracking */
+    color: @accent;
+}
+
+.machine-note {
+    font-size: 10px;
+    color: @text-dim;
+}
+
+/* ── Pages (docs/mockups/Main.dc.html) ───────────────────────────────────── */
+
+.page-title {
+    font-size: 22px;
+    font-weight: 800;
+    color: @text;
+}
+
+.page-subtitle {
+    font-size: 12.5px;
+    margin-top: -1px; /* the title's GTK line box is 1 px taller than the mockup's */
+    color: @text-dim;
+}
+
+.eyebrow {
+    font-size: 10.5px;
+    font-weight: 800;
+    letter-spacing: 1px; /* mockup 0.07em; GTK 3 ignores sub-pixel tracking */
+    color: @text-dim;
+}
+
+/* ── Components ──────────────────────────────────────────────────────────── */
+
+.card {
+    background-color: @bg-surface;
+    border: 1px solid @stroke;
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.chip {
+    background-color: @bg-raised;
+    border: 1px solid @stroke;
+    border-radius: 999px;
+    padding: 3px 9px;
+    font-size: 10.5px;
+    font-weight: 800;
+    color: @text;
+}
+
+.chip.accent {
+    background-color: alpha(@accent, 0.14);
+    border-color: transparent;
+    color: @accent;
+}
+
+.pill {
+    background-image: none;
+    background-color: @bg-raised;
+    border: 1px solid @stroke;
+    border-radius: 999px;
+    padding: 0 13px;
+    min-height: 30px;
+    color: @text;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.pill.primary {
+    background-image: linear-gradient(to bottom, @accent, @accent-2);
+    border-color: transparent;
+    color: @on-accent;
+}
+
+.status-ok { color: @ok; }
+.status-warn { color: @warn; }
+.status-danger { color: @danger; }
+
+scrollbar {
+    background-color: transparent;
+}
+
+scrollbar slider {
+    background-color: @bg-raised;
+    border-radius: 999px;
+    min-width: 6px;
+    min-height: 6px;
+}
+
+scrollbar slider:hover {
+    background-color: @text-dim;
+}

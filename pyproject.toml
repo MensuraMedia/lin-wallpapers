@@ -1,0 +1,119 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lin-wallpapers"
+description = "One wallpaper, every screen: find, catalogue, preview and apply wallpapers across desktop, lock, login, boot splash and boot menu."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+dynamic = ["version"]
+# PyGObject, pycairo and Pillow come from the distribution (python3-gi, python3-gi-cairo, python3-pil);
+# the venv is created with --system-site-packages so they are never rebuilt from PyPI.
+dependencies = []
+
+[project.scripts]
+linwp = "src.cli.linwp:main"
+
+[project.gui-scripts]
+lin-wallpapers = "src.main:main"
+
+[tool.setuptools]
+packages = { find = { include = ["src", "src.*"] } }
+
+[tool.setuptools.package-data]
+"src.catalogue" = ["schema.sql"]
+
+[tool.setuptools.dynamic]
+version = { attr = "src.__version__" }
+
+[tool.ruff]
+line-length = 110
+target-version = "py311"
+extend-exclude = ["docs", "reference", "build", "*.md"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "PTH", "RUF"]
+
+[tool.ruff.lint.per-file-ignores]
+# gi.require_version() has to run before the gi.repository imports.
+"src/gtk_version.py" = ["E402"]
+# En dashes and × are deliberate in prose (milestone ranges, dimensions).
+"**/*.py" = ["RUF001", "RUF002", "RUF003"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src", "tools"]
+warn_unused_ignores = true
+warn_redundant_casts = true
+no_implicit_optional = true
+check_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["gi", "gi.*", "cairo"]
+ignore_missing_imports = true
+
+# The distribution's Pillow (10.2) ships no py.typed.
+[[tool.mypy.overrides]]
+module = ["PIL", "PIL.*"]
+ignore_missing_imports = true
+
+# The layers that will hold the engine are strict from day one (milestones M0.7).
+[[tool.mypy.overrides]]
+module = ["src.apply.*", "src.catalogue.*", "src.imaging.*", "src.helper.*", "src.scanner.*"]
+strict = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers"
+markers = ["smoke: launches the real GTK app (needs a display or xvfb-run)"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["src/main.py"]
+
+[tool.importlinter]
+root_package = "src"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Widgets never reach past the view models"
+type = "forbidden"
+source_modules = ["src.ui", "src.pages"]
+forbidden_modules = ["src.scanner", "src.catalogue", "src.apply", "src.imaging", "src.helper"]
+
+[[tool.importlinter.contracts]]
+name = "Services never import GTK"
+type = "forbidden"
+source_modules = [
+    "src.scanner", "src.catalogue", "src.imaging", "src.apply", "src.helper", "src.preview", "src.cli",
+    "src.capability", "src.util.cancel",
+]
+forbidden_modules = ["gi"]
+
+[[tool.importlinter.contracts]]
+name = "The core never imports a provider"
+type = "forbidden"
+source_modules = ["src.apply.registry"]
+forbidden_modules = ["src.apply.providers"]
+
+# M1 contract §1: the walker talks to the catalogue through Protocols it defines itself.
+[[tool.importlinter.contracts]]
+name = "The scanner never imports the catalogue"
+type = "forbidden"
+source_modules = ["src.scanner"]
+forbidden_modules = ["src.catalogue"]
+
+# M1 contract §1/D2: `viewmodels/gdk_displays.py` (P6) is the only view model that may reach GTK, and only
+# through `src.gtk_version`. The gi-free modules (services, scan_vm, sources_vm, browse_vm) do not exist
+# yet and import-linter refuses to name a missing module, so the rule covers the whole package and carves
+# out that one import — which also catches any future view model. `src.util.threads` imports GLib lazily,
+# inside `glib_scheduler()` only; view models take their scheduler injected, so that edge is not theirs.
+[[tool.importlinter.contracts]]
+name = "View models are gi-free (except gdk_displays, via gtk_version)"
+type = "forbidden"
+source_modules = ["src.viewmodels"]
+forbidden_modules = ["gi"]
+ignore_imports = ["src.viewmodels.gdk_displays -> src.gtk_version", "src.util.glib_loop -> gi"]
+unmatched_ignore_imports_alerting = "none"

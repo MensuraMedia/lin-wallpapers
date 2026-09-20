@@ -8,7 +8,7 @@ happens.
 | | Milestone | Outcome |
 | --- | --- | --- |
 | **M0** | **Foundation** | The app opens, navigates and is themed; no features yet. Specified below. |
-| **M1** | **Catalogue** | Finds the images and shows them: scanner, SQLite catalogue, thumbnails, Sources and Browse. Specified below. |
+| **M1** | **Catalogue** | Finds the images and shows them: scanner with user exclusions, display detection, SQLite catalogue, thumbnails, the ideal-images segment, Sources and Browse. Specified below. |
 | **M2** | **Judgement** | Decides which images actually work as wallpapers: scoring, badges, duplicates, Image page. Specified below. |
 | **M3** | **Previews** | Shows the result before it happens: transform pipeline, Cairo compositor for all five screens, capability probes. Specified below. |
 | **M4** | **Apply (user space)** | The transaction engine, proven where no root is needed: desktop + lock on five desktops, with undo. Specified below. |
@@ -65,68 +65,101 @@ helper, packaging. Pages are empty placeholders that state what will live there.
       `boot-safety.md` (validate before install, verify the initramfs, always have a rollback path)
 - [ ] `.claude/memory/` — `MEMORY.md`, `decisions.md` seeded with the concept's decisions (base script as the engine; providers not conditionals; no daemon; GTK 3 now, GTK 4 rules from day one), `pending.md`, `sessions/`, `changes/`
 - [ ] `.claude/hooks/` — session-start, security gate, post-edit lint with the Python section enabled (`ruff`); `chmod +x`
-- [ ] `CLAUDE.md` from the v2026.04 template with the real build/test/lint/run commands
-- [ ] `.claudeignore`, `.gitignore` (already present), first `changelog.md` entry
+- [x] `CLAUDE.md` from the v2026.04 template with the real build/test/lint/run commands
+- [x] `.claudeignore`, `.gitignore` (already present), first `changelog.md` entry
 
 ## M0.2 — App shell from the starter template
 
-- [ ] Vendor the starter structure: `src/main.py`, `src/config/{config_theme,config_layout,config_themes}.py`, `src/ui/{dashboard_window,sidebar,content_area}.py`, `src/pages/page_base.py`, `src/modules/manager_navigation.py`, `src/utils/manager_theme.py`, `resources/css/style.css`, `run.sh`
-- [ ] Record the derivation in `NOTICE` (already noted) and keep the template's conventions: 150 px sidebar, `nav_items` tuples, `register_page("<route>", page)`, `BasePage.build_content()`
-- [ ] Replace `Gtk.main()` with `Gtk.Application` + `Gio.SimpleAction`; single instance; app ID `io.mensuramedia.LinWallpapers`
-- [ ] `src/gtk_version.py` — the single `gi.require_version('Gtk', os.environ.get('LWP_GTK', '3.0'))` gate
-- [ ] `src/ui/compat.py` — `append()`, `set_child()`, `show()`, `CanvasArea` (wraps the `draw` signal, exposes `on_draw(cr, w, h)`), gesture helpers
-- [ ] `run.sh` creates the venv, installs requirements, launches; `shellcheck`-clean
+- [x] Vendor the starter structure: `src/main.py`, `src/config/{config_theme,config_layout,config_themes}.py`, `src/ui/{dashboard_window,sidebar,content_area}.py`, `src/pages/page_base.py`, `src/modules/manager_navigation.py`, `src/utils/manager_theme.py`, `resources/css/style.css`, `run.sh`
+- [x] Record the derivation in `NOTICE` (already noted) and keep the template's conventions: 150 px sidebar, `nav_items` tuples, `register_page("<route>", page)`, `BasePage.build_content()`
+- [x] Replace `Gtk.main()` with `Gtk.Application` + `Gio.SimpleAction`; single instance; app ID `io.mensuramedia.LinWallpapers`
+- [x] `src/gtk_version.py` — the single `gi.require_version('Gtk', os.environ.get('LWP_GTK', '3.0'))` gate
+- [x] `src/ui/compat.py` — `append()`, `set_child()`, `show()`, `CanvasArea` (wraps the `draw` signal, exposes `on_draw(cr, w, h)`), gesture helpers
+- [x] `run.sh` creates the venv, installs requirements, launches; `shellcheck`-clean
 
 ## M0.3 — Design tokens and theme
 
-- [ ] `resources/css/tokens.css` — `@define-color` for the palette from `ui-kit-yellow-gray-yello.jpg`:
+- [x] `resources/css/tokens.css` — `@define-color` for the palette from `ui-kit-yellow-gray-yello.jpg`:
       `bg-base #1E2233`, `bg-surface #252A3E`, `bg-raised #2B3044`, `stroke rgba(255,255,255,.08)`,
       `text #F2F3F7`, `text-dim #8A8E9E`, `accent #FFC700`, `accent-2 #FFB500`, `on-accent #1A1400`,
       `ok #4ADE80`, `warn #FFB500`, `danger #EF4444`
-- [ ] `resources/css/style.css` — component classes only (cards, chips, pills, sidebar, score ring); no
+- [x] `resources/css/style.css` — component classes only (cards, chips, pills, sidebar, score ring); no
       `override_*`, no `-gtk-gradient`, no hard-coded hex outside `tokens.css`
-- [ ] GResource bundle (`resources/lin-wallpapers.gresource.xml`) built by `run.sh` and the packaging later
-- [ ] The starter's theme applicator kept, with the Lin Wallpapers theme as the default entry in `config_themes.py`
-- [ ] 8 px spacing grid and 12/16 px radii expressed as layout constants in `config_layout.py`
+- [x] GResource bundle (`resources/lin-wallpapers.gresource.xml`) built by `run.sh` and the packaging later
+- [x] The starter's theme applicator kept, with the Lin Wallpapers theme as the default entry in `config_themes.py`
+- [x] 8 px spacing grid and 12/16 px radii expressed as layout constants in `config_layout.py`
 
 ## M0.4 — Pages, routes and the empty states
 
-- [ ] Eight `BasePage` subclasses registered as routes, matching the mockups: `browse`, `image`, `screens`,
-      `preview`, `sources`, `collections`, `history`, `settings` (+ `about`)
-- [ ] Sidebar: logo block, route buttons with symbolic icons, and the footer slot that will later show
+- [x] Eight `BasePage` subclasses registered as sidebar routes, matching the mockups: `browse`, `image`,
+      `screens`, `preview`, `sources`, `collections`, `history`, `settings` — plus a ninth page, `about`,
+      registered as a route but opened from Settings rather than the sidebar (`diagnostics` joins it in M6)
+- [x] Sidebar: logo block, route buttons with symbolic icons, and the footer slot that will later show
       "this machine" (empty in M0)
-- [ ] Each page renders a titled placeholder naming the milestone that fills it — no lorem ipsum, no fake data
-- [ ] Window: 1280 × 800 default, 960 × 640 minimum; state (size, last route) remembered in `GSettings`
-- [ ] Keyboard: `Ctrl+1…8` route switching, `F5` reserved for rescan, focus-visible styling
+- [x] Each page renders a titled placeholder naming the milestone that fills it — no lorem ipsum, no fake data
+- [x] Window: 1280 × 800 default, 960 × 640 minimum; state (size, last route) remembered in `GSettings`
+- [x] Keyboard: `Ctrl+1…8` route switching, `F5` reserved for rescan, focus-visible styling
 
 ## M0.5 — Layering made mechanical
 
-- [ ] Package skeletons with docstrings and `__all__`: `viewmodels/`, `scanner/`, `catalogue/`, `imaging/`, `preview/`, `apply/` (+ `apply/providers/`, `apply/registry.py`), `helper/`, `sync/`, `cli/`, `util/`
-- [ ] `apply/registry.py` — the provider registry and the `SurfaceProvider` Protocol from the concept (§17.1), with no implementations yet
-- [ ] `tools/gtk4_lint.py` — fails on banned GTK 3-only calls (`pack_start`, `add`, `show_all`, `Gtk.Menu`, `Gtk.StatusIcon`, `button-press-event`, `Gdk.Screen`, `override_*`) outside `ui/compat.py`
-- [ ] `import-linter` contracts: `ui`/`pages` may not import `scanner`/`catalogue`/`apply`; `scanner`/`catalogue`/`imaging`/`apply`/`helper` may not import `gi`
-- [ ] `util/threads.py` — the worker-to-UI pattern (`run_in_worker(fn, on_done)` → `GLib.idle_add`), so no later module invents its own
+- [x] Package skeletons with docstrings and `__all__`: `viewmodels/`, `scanner/`, `catalogue/`, `imaging/`, `preview/`, `apply/` (+ `apply/providers/`, `apply/registry.py`), `helper/`, `sync/`, `cli/`, `util/`
+- [x] `apply/registry.py` — the provider registry and the `SurfaceProvider` Protocol from the concept (§17.1), with no implementations yet
+- [x] `tools/gtk4_lint.py` — fails on banned GTK 3-only calls (`pack_start`, `add`, `show_all`, `Gtk.Menu`, `Gtk.StatusIcon`, `button-press-event`, `Gdk.Screen`, `override_*`) outside `ui/compat.py`
+- [x] `import-linter` contracts: `ui`/`pages` may not import `scanner`/`catalogue`/`apply`; `scanner`/`catalogue`/`imaging`/`apply`/`helper` may not import `gi`
+- [x] `util/threads.py` — the worker-to-UI pattern (`run_in_worker(fn, on_done)` → `GLib.idle_add`), so no later module invents its own
 
 ## M0.6 — CLI entry point
 
-- [ ] `src/cli/linwp.py` with the argument surface stubbed: `scan`, `list`, `show`, `preview`, `plan`, `apply`, `undo`, `history`, `sync`, `doctor`, plus `--json` and the exit-code table
-- [ ] Implemented in M0: `--version`, `--help`; every other subcommand exits 3 ("not implemented yet") with a one-line message naming its milestone
-- [ ] Console-script entry point so `linwp` works from the venv
+- [x] `src/cli/linwp.py` with the argument surface stubbed: `scan`, `list`, `show`, `preview`, `plan`, `apply`, `undo`, `history`, `sync`, `doctor`, plus `--json` and the exit-code table
+- [x] Implemented in M0: `--version`, `--help`; every other subcommand exits 3 ("not implemented yet") with a one-line message naming its milestone
+- [x] Console-script entry point so `linwp` works from the venv
 
 ## M0.7 — Tests, tooling and the fake root
 
-- [ ] `pytest` + `pytest-cov`; `tests/unit/` with the first real tests: the `SurfaceProvider` Protocol shape, the registry, `compat` helpers, token parsing
-- [ ] `tests/fakeroot/` skeleton — a synthetic `/etc`, `/usr/share`, `/boot` tree plus the fixture that points a provider at it (empty of providers in M0, used from M4)
-- [ ] `xvfb-run` smoke test: the app starts, switches every route, and exits cleanly with no GTK criticals
-- [ ] `ruff`, `mypy` (strict on `src/apply`, `src/catalogue`, `src/imaging`, `src/helper`), `shellcheck` for `run.sh`
-- [ ] A single `make check` / `/build-test` path that runs: `bash -n`/shellcheck → ruff → mypy → gtk4_lint → import-linter → pytest → the smoke test
+- [x] `pytest` + `pytest-cov`; `tests/unit/` with the first real tests: the `SurfaceProvider` Protocol shape, the registry, `compat` helpers, token parsing
+- [x] `tests/fakeroot/` skeleton — a synthetic `/etc`, `/usr/share`, `/boot` tree plus the fixture that points a provider at it (empty of providers in M0, used from M4)
+- [x] `xvfb-run` smoke test: the app starts, switches every route, and exits cleanly with no GTK criticals
+- [x] `ruff`, `mypy` (strict on `src/apply`, `src/catalogue`, `src/imaging`, `src/helper`), `shellcheck` for `run.sh`
+- [x] A single `make check` / `/build-test` path that runs: `bash -n`/shellcheck → ruff → mypy → gtk4_lint → import-linter → pytest → the smoke test
 
 ## M0.8 — Documentation and memory
 
-- [ ] `README.md` development section updated with the real commands once they exist
-- [ ] `docs/` — this file kept current; the concept's §13 layout reconciled with what was actually created
+- [x] `README.md` development section updated with the real commands once they exist
+- [x] `docs/` — this file kept current; the concept's §13 layout reconciled with what was actually created
 - [ ] First session log in `.claude/memory/sessions/`, first change manifest in `.claude/memory/changes/`
-- [ ] `changelog.md` entries as work happens, not after
+- [x] `changelog.md` entries as work happens, not after
+
+---
+
+### M0 status and deviations (2026-09-18)
+
+Everything above is done and `make check` passes, **except the `.claude/` scaffold in M0.1** (and the session
+log / change manifest that live inside it): the universal setup scripts install Claude Code hooks and a
+`dontAsk` permissions file, which an agent session may not deploy for itself. Run them by hand, then add the
+three project rules, `decisions.md` and `pending.md`:
+
+```bash
+sudo apt install jq      # the universal hooks need it
+universal-instruction-set/universal-agents/setup.sh ~/projects/lin-wallpapers "Lin Wallpapers" "GTK wallpaper manager for every screen"
+universal-instruction-set/universal-permissions/setup.sh ~/projects/lin-wallpapers
+```
+
+Deviations from the letter of this spec, to be copied into `decisions.md`:
+
+- **Package root is `src`** (`python -m src.main`, `linwp = src.cli.linwp:main`) rather than the starter's
+  path-relative imports — required by acceptance 6 (`import src.gtk_version`), mypy and import-linter.
+- **`src/utils/manager_theme.py` was not vendored.** The starter's two theme managers collapse into
+  `src/modules/manager_theme_applicator.py`, which loads `tokens.css` + `style.css` (GResource, falling back
+  to `resources/`) instead of generating CSS from hex values in Python — the "no hex outside tokens.css" rule.
+  Non-GTK utilities live in `src/util/` as in the concept.
+- **`config_themes.py` holds no colors:** a theme is an optional token-override file; the default overrides nothing.
+- **Window state uses a GSettings schema compiled into `build/schemas`** by `run.sh` when running from source;
+  without it the app still runs and simply does not persist.
+- **The smoke test uses `xvfb-run` when installed and the current display otherwise** (`xvfb` needs `sudo apt
+  install`); `shellcheck` comes from PyPI (`shellcheck-py`) for the same reason.
+- **`about` is a ninth route** opened from Settings, not a sidebar entry (the mockups show eight).
+- The import-linter contracts also cover `src.preview` and `src.cli` (no `gi`), and forbid `apply.registry`
+  from importing `apply.providers` — M7's "core untouched" rule, enforced from day one.
 
 ---
 
@@ -168,14 +201,20 @@ M1 begins with `/plan-first` on the scanner and catalogue — specified below.
 is full of real thumbnails from real files, and the scan is fast, cancellable, incremental and honest about
 what it skipped.
 
-**Demo at the end of M1:** first run offers the proposed scan roots; one click fills the grid while the scan
-is still running; filtering to `≥ 1920 × 1080` and `16:9` narrows thousands of images instantly; unplugging
+**Demo at the end of M1:** first run offers the proposed scan roots and shows the display it measured
+("eDP-1 · 1920 × 1080"); one click fills the grid while the scan is still running, and the **Ideal for this
+desktop** segment fills alongside it with the images whose dimensions fit that screen; right-clicking a
+folder of scanned receipts and choosing *Exclude this folder* removes its images at once, and switching the
+*Game libraries* group off brings a texture folder back; filtering to `≥ 1920 × 1080` and `16:9` narrows
+thousands of images instantly; unplugging
 the external drive dims its images instead of losing them; `linwp scan` and `linwp list --min-width 1920`
 do the same work with no GUI.
 
 ### In scope
-Scan roots and the exclusion policy, the two-phase walk, image probing, the SQLite catalogue, the thumbnail
-cache, the Sources page, and the Browse page bound to real rows (search, filter, sort, selection).
+Scan roots, **user-controlled exclusions (folders, files, patterns and groups of them)**, **detection of the
+local desktop's display dimensions at scan time**, the two-phase walk, image probing, the SQLite catalogue,
+the thumbnail cache, **the dimension-based ideal-images segment**, the Sources page, and the Browse page bound
+to real rows (search, filter, sort, selection).
 
 ### Not in scope
 Suitability scoring, badges and duplicate detection (M2 — the columns exist and stay `NULL`); the Image
@@ -194,15 +233,69 @@ touches nothing but the catalogue, the thumbnail cache and its own settings.**
       reason shown in the UI — never a silent skip
 - [ ] Removable media: udisks2 mount events over D-Bus → "Scan this drive?" toast, answer remembered per
       volume UUID; `volume_id` stored with every row so a remount at another path heals instead of duplicating
-- [ ] `scanner/exclude.py` — pseudo-filesystems, `/timeshift`, `.snapshots`, `.Trash*`, `~/.cache`,
-      `.thumbnails`, VCS/build dirs, `node_modules`, Steam/Proton library trees, plus user ignore globs;
-      applied **before** `stat`, and each exclusion is explainable ("skipped: Steam library")
+- [ ] Exclusions are specified in M1.1a; roots only decide where the walk *starts*
 - [ ] Loop protection: symlinks not followed across filesystem boundaries; `(device, inode)` identity stops
       bind mounts and hardlinks from being counted twice
 
+## M1.1a — Exclusions: folders, files, and groups of both
+
+Concept [§5.1](../TECHNICAL-CONCEPT.md). The user decides what the search skips, at three granularities,
+reversibly, and never silently.
+
+- [ ] `scanner/exclude.py` — the rule engine: **folder** rules (a directory and everything beneath it),
+      **file** rules (one image, matched by path *and* `(device, inode)` so a rename doesn't revive it) and
+      **pattern** rules (globs: `*`, `?`, `**`, character classes — no regular expressions), each optionally
+      scoped to one root
+- [ ] **Groups:** a named set of rules switched on or off as a unit. Built-in groups replace the old
+      hard-coded list — *System and pseudo-filesystems* (locked on), *Snapshots, backups and trash*, *Caches
+      and thumbnails*, *Code and build trees*, *Game libraries*, *Icons, emoji and UI assets*, *Application
+      data* — and the user can create groups and move any rule into one
+- [ ] Evaluated **before `stat`**: an excluded directory is never descended into, an excluded file never
+      opened. Rules compile once per scan into a matcher (prefix trie for folders, set for files, compiled
+      globs for patterns) so exclusion costs less than the `stat` it avoids
+- [ ] Precedence, explicit and recorded: file › folder › pattern; an explicit include (a root or folder the
+      user added) beats a group default. The winning rule id is stored with every skip
+- [ ] **Already-catalogued rows:** adding a rule flags matching rows `excluded_by = <rule id>` immediately
+      (no rescan) — they leave Browse, collections and the ideal segment, and keep their thumbnails, tags and
+      score. Removing or disabling the rule clears the flag just as fast. Nothing is ever deleted
+- [ ] An image that is currently applied to a screen stays visible in History and on the Screens page,
+      marked "excluded from the catalogue"
+- [ ] Rules on removable volumes are stored relative to the volume UUID; rules export/import with settings
+- [ ] Never silent: per-rule skip counts, surfaced in Sources and written to the log with the rule id
+- [ ] UI entry points: Sources → Exclusions (*Add folder*, *Add pattern*, groups with switches, drag a folder
+      in); right-click in Browse and on the Image page → *Exclude this image* / *Exclude this folder* /
+      *Exclude folders like this…* (pre-fills a pattern); every exclusion offers Undo in a toast
+- [ ] Live preview while editing a pattern: "this would exclude N images in M folders", listing the first few
+- [ ] CLI: `linwp exclude add <path|glob> [--group NAME] [--root PATH]`, `remove`, `list [--json]`,
+      `group enable|disable NAME`, and `test <path>` — "would this be scanned, and if not, which rule says no?"
+
+## M1.1b — Display detection: measure this desktop before judging anything
+
+Concept [§5.2](../TECHNICAL-CONCEPT.md). Every scan starts by reading the local desktop's dimensions.
+
+- [ ] `scanner/displays.py` — the `DisplayProbe` interface and the `Display(name, width, height, scale,
+      primary, source)` record, in **physical pixels after rotation**. The service layer imports no GTK, so
+      the probe is injected
+- [ ] `GdkDisplayProbe` (GUI side, under `viewmodels/`): `Gdk.Display` monitors, geometry × scale factor,
+      primary flag, connector and model — X11 and Wayland alike; never `xrandr` in the GUI
+- [ ] `DrmDisplayProbe` (service side): `/sys/class/drm/card*-*/status` = `connected` and the first line of
+      `modes` — works for `linwp` over SSH, on a TTY, and later inside the helper
+- [ ] Fallback chain `xrandr --current` → `wlr-randr` → `kscreen-doctor -o` where present; argument vectors,
+      timeouts, output parsed defensively
+- [ ] **Declared displays:** `linwp scan --display 3840x2160[,…]` and *Settings → Displays → Add a display I
+      don't have connected* — judged alongside the detected ones
+- [ ] The scan writes a `display` snapshot and a `scan` row referencing it (`display_set`), so every verdict
+      names the screens it was made against
+- [ ] Change detection: GDK `monitors-changed` while the app is open, or a differing snapshot at the next
+      scan → the ideal segment (M1.5a) is rebuilt from stored dimensions with **zero image files opened**
+- [ ] Nothing detected → reason code `DISPLAY_NOT_DETECTED` with evidence; the scan still catalogues
+      everything, the ideal segment is empty and says why, and the remedy (`--display`) is named
+- [ ] `linwp displays [--json]` prints what was measured and from which source; the same block appears in
+      `linwp doctor` (M3)
+
 ## M1.2 — The walk
 
-- [ ] `scanner/walker.py` — phase 1 `os.scandir` by extension and size (≥ 200 KB default), phase 2 probe;
+- [ ] `scanner/walker.py` — phase 1 `os.scandir` by extension and size (≥ 64 KiB default), phase 2 probe;
       phase 1 reports progress per directory, phase 2 drives the progress bar
 - [ ] Worker pool with a **bounded** queue (`concurrent.futures`), cancellable mid-scan, and back-pressure so
       the catalogue writer is never the bottleneck
@@ -245,6 +338,33 @@ touches nothing but the catalogue, the thumbnail cache and its own settings.**
 - [ ] Missing/failed thumbnail → a typed placeholder (with the reason), never a blank card
 - [ ] Reuse of the desktop's existing thumbnails is explicitly **not** done (different keying, stale risk)
 
+## M1.5a — The ideal-images segment
+
+Concept [§6.1](../TECHNICAL-CONCEPT.md). Images whose dimensions suit this desktop are gathered
+automatically into **Ideal for this desktop**. Dimension-based on purpose, so it works during the very first
+scan — M2's score later *orders* the segment, it never decides membership.
+
+- [ ] `catalogue/ideal.py` — membership per `(image, display)`: covers the screen (`width ≥ W`, `height ≥ H`
+      after EXIF rotation — no upscaling), fill-crop loss ≤ 16 % of the image area (setting, 0–40 %), same
+      orientation as the display, decodable/still/opaque, not excluded, not missing
+- [ ] Stored in `ideal_image(image_id, display_id, exact, crop_loss)`; rebuilt by a single `INSERT … SELECT`
+      over `image × display` when the display set, the threshold or the exclusions change; updated
+      incrementally as the scan probes each file
+- [ ] Sub-segments as saved queries: *Ideal for every display*, *Ideal for `<output>`* (one per display),
+      *Exact match*, *Larger than needed*, and *Near misses* (covers ≥ 90 % of the width and height, or crops ≤ 25 % —
+      outside the segment, each naming the test it failed)
+- [ ] Every member explains itself ("3840 × 2160 covers 1920 × 1080; fill crop loses 0 %"), and so does every
+      near miss ("1760 × 990 — 8 % too small for eDP-1")
+- [ ] Manual corrections: *Remove from ideal* / *Add to ideal anyway* (`ideal_pin`), surviving rescans and
+      display changes, shown as manual
+- [ ] Browse: a segment switch above the filter bar — **Ideal for this desktop** (default once it has
+      members) · All images · Near misses — with the measured displays shown beside it and a per-display
+      chooser when more than one output is connected
+- [ ] Collections page lists the segment and its sub-segments first, as built-in and non-deletable
+- [ ] Scan banner counts it live: "2,140 found · 830 probed · 212 ideal for this desktop"
+- [ ] CLI: `linwp list --ideal [--display NAME]`, `linwp list --near-miss`, `linwp show` prints the per-display verdicts
+- [ ] Nothing is copied or moved on disk — the segment is rows, not files
+
 ## M1.6 — Sources page
 
 - [ ] Root list: path, kind (XDG / system / volume / user), enabled switch, image count, last scan, and the
@@ -252,7 +372,11 @@ touches nothing but the catalogue, the thumbnail cache and its own settings.**
 - [ ] Add folder (chooser + drag-and-drop onto the page), remove, rescan one, rescan all, cancel
 - [ ] Volumes: online/offline state by UUID, "scan this drive" memory, and the count of images currently offline
 - [ ] The skipped list, with reasons: network mount, excluded path, unreadable, unsupported format
-- [ ] Exclusions editor (glob list) with an immediate "this would skip N images" count
+- [ ] **Exclusions panel** (M1.1a): the rule list by kind (folder / file / pattern) with per-rule skip counts,
+      the built-in and user groups with their switches, *Add folder* / *Add pattern* / *New group*, drag a
+      folder in, the live "this would exclude N images in M folders" preview, and *Test a path*
+- [ ] **Displays strip** (M1.1b): the outputs the last scan measured (name, physical size, scale, source),
+      declared displays, and *Add a display I don't have connected*
 
 ## M1.7 — Browse page
 
@@ -273,8 +397,21 @@ touches nothing but the catalogue, the thumbnail cache and its own settings.**
 - [ ] Generated fixture library (10,000 small images across shapes and formats) built by a script, not committed
 - [ ] Benchmarks recorded in `docs/perf.md` against the concept's budgets (§20): ≥ 300 files/s in phase 1,
       ≥ 60 probes/s in phase 2, 60 fps scrolling at 20,000 cards, thumbnail from cache < 5 ms, < 250 MB RSS
-- [ ] Unit tests: exclusion policy, root discovery against a fake mount table, incremental-rescan decisions,
+- [ ] Unit tests: root discovery against a fake mount table, incremental-rescan decisions,
       query builder SQL, thumbnail keying, migration runner
+- [ ] **Exclusion tests:** folder, file and pattern rules; precedence (file › folder › pattern, explicit
+      include beats a group default); group on/off; a renamed file stays excluded (inode); volume-relative
+      rules after a remount; excluded directories are never `stat`ed (asserted with a counting filesystem
+      double); flag-and-restore of catalogued rows without a rescan; glob edge cases (`**`, unicode, a
+      pattern that matches everything is refused with a reason)
+- [ ] **Display tests:** DRM sysfs fixtures in the fake root (one panel, laptop + external; rotation is tested
+      through the xrandr parser and the GDK probe, since DRM sysfs does not report it;
+      HiDPI 2×, nothing connected); xrandr/wlr-randr output parsing; declared displays; physical-vs-logical
+      pixels; `DISPLAY_NOT_DETECTED`
+- [ ] **Ideal-segment tests:** table-driven membership (exact, larger, 16:10 on 16:9, 1:1, portrait on a
+      landscape and on a rotated display, one pixel too small, alpha, animated, excluded, missing); near-miss
+      classification; pins; rebuilding for a changed display set opens **no** image file (asserted) and
+      takes < 200 ms on 20,000 rows
 - [ ] Nasty-file corpus: truncated JPEG, zero-byte, CMYK, 16-bit PNG, EXIF-rotated, animated GIF, unicode and
       newline filenames, permission-denied, symlink loop, a file that disappears mid-scan
 - [ ] `xvfb-run` smoke test extended: scan a fixture root, assert the grid fills and filters narrow it
@@ -289,6 +426,17 @@ rescans on demand only.
 ## M1 acceptance criteria
 
 1. First run proposes roots and scans **nothing** until the user agrees.
+1a. **Exclusions:** a folder, a single file, a glob pattern and a whole group can each be excluded and
+    re-included from the UI and from `linwp exclude`; the effect on already-catalogued images is immediate
+    in both directions with no rescan; no excluded directory is ever descended into; every skip is
+    attributed to a rule; nothing is deleted.
+1b. **Display detection:** every scan records the displays it measured, in physical pixels, from GDK in the
+    GUI and from DRM sysfs in `linwp`; a declared display can be added; with no display detectable the scan
+    still completes and reports `DISPLAY_NOT_DETECTED`.
+1c. **Ideal segment:** after a scan of the reference machine, *Ideal for this desktop* contains exactly the
+    images that cover 1920 × 1080 within the crop-loss threshold — checked against a hand-made list — and
+    each states why; connecting a second monitor or declaring a 4K display regroups the segment in under a
+    second without opening an image file.
 2. A full scan of the reference machine (`~/Pictures`, `/data`, `/usr/share/backgrounds`) completes with a
    live-filling grid, an accurate count, and a skipped list that explains every omission.
 3. A rescan with no changes touches no image file (verified by count of probes = 0) and finishes in seconds.
@@ -311,7 +459,10 @@ rescans on demand only.
 | The thumbnail cache grows without limit | Size budget + LRU eviction, visible in Settings |
 | SQLite contention between workers and the UI | One writer thread, WAL, short transactions, batched inserts |
 | "Scan everything" reads a network mount and hangs | Network filesystems opt-in, per-mount, with the reason shown |
-| Scoring creeps in early | The score columns stay `NULL` in M1; the card's ring slot stays empty until M2 |
+| Scoring creeps in early | The score columns stay `NULL` in M1; the card's ring slot stays empty until M2. The ideal segment is dimension arithmetic only — no analysis, no weights |
+| The measured screen size is wrong (HiDPI, rotation, headless) | Physical pixels (geometry × scale), rotation applied, DRM sysfs as a display-server-free source, the measured values shown in the UI, declared displays as the override, and a reason code instead of a guess |
+| Exclusion rules become a second, confusing filter system | Exclusions act on the *scan and the catalogue* (what exists for the app); filters act on the *view*. The UI keeps them in different places and says so; every exclusion is undoable from a toast |
+| A broad pattern silently hides half the library | Live "this would exclude N images" preview before saving, per-rule counts afterwards, and a pattern that would exclude everything is refused |
 
 ## After M1
 
@@ -365,7 +516,8 @@ focal point. Nothing is applied, and nothing is written outside `$HOME`.
 - [ ] `scanner/score.py` — the weighted model from [TECHNICAL-CONCEPT.md §6](../TECHNICAL-CONCEPT.md):
       resolution vs. the *actual* connected outputs (35), aspect match (20), detail distribution (15),
       color coherence (10), format and integrity (10), not-a-wallpaper penalties (10)
-- [ ] **Display-aware:** outputs come from `Gdk.Monitor`; the machine's geometry is part of the score input,
+- [ ] **Display-aware:** outputs come from the M1.1b `DisplayProbe` snapshot (GDK in the GUI, DRM sysfs in the
+      CLI) — the same physical-pixel geometry the ideal segment uses; the machine's geometry is part of the score input,
       and a display change (dock, external monitor, resolution change) invalidates and recomputes scores
       in the background — with the old score shown until the new one lands, never a blank
 - [ ] **Deterministic and versioned:** `scorer_version` stored per row; bumping the version triggers a
@@ -401,7 +553,9 @@ focal point. Nothing is applied, and nothing is written outside `$HOME`.
 - [ ] Default sort changes to **Score, descending**; the other sorts stay
 - [ ] The score ring on each card fills in (the slot reserved in M1), with the number and the accent arc
 - [ ] New filters: minimum score, `Text-safe`, `Dark`/`Light`, `Hide duplicates`, `Native or better`
-- [ ] "Suitable for every screen" becomes a real saved query: score ≥ 70, native or better, text-safe
+- [ ] The **Ideal for this desktop** segment (M1.5a) is now ordered by score and can be narrowed by the new
+      filters; the score never adds or removes a member
+- [ ] "Suitable for every screen" becomes a real saved query: in *Ideal for every display*, score ≥ 70, text-safe
 - [ ] The empty-result state names which chip excluded everything (an M1 promise, now with more chips to blame)
 - [ ] Analysis progress is its own quiet line in the scan banner ("1,240 analysed of 1,864"), cancellable,
       and never blocks browsing

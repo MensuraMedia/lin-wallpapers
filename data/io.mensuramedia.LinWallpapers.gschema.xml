@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+  <schema id="io.mensuramedia.LinWallpapers" path="/io/mensuramedia/LinWallpapers/">
+    <key name="window-width" type="i">
+      <default>1280</default>
+      <summary>Window width</summary>
+    </key>
+    <key name="window-height" type="i">
+      <default>800</default>
+      <summary>Window height</summary>
+    </key>
+    <key name="window-maximized" type="b">
+      <default>false</default>
+      <summary>Whether the window was maximized</summary>
+    </key>
+    <key name="last-route" type="s">
+      <default>'browse'</default>
+      <summary>The page shown when the app was last closed</summary>
+    </key>
+  </schema>
+</schemalist>
