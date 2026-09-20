@@ -35,15 +35,32 @@ class AppWindow(Adw.ApplicationWindow):
 
         self.sidebar = Sidebar(self.state, self.navigate)
 
-        root = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
-        root.add_css_class("lw-root")
-        root.append(self.sidebar)
         scroller = Gtk.ScrolledWindow()
         scroller.set_hexpand(True)
         scroller.set_vexpand(True)
         scroller.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
         scroller.set_child(self.stack)
-        root.append(scroller)
+
+        # Content pane: a flat header bar (window minimise/maximise/close controls
+        # and a draggable strip) above the scrolling page stack. Without this the
+        # Adw.ApplicationWindow has no titlebar at all — nothing to move/min/max.
+        header = Adw.HeaderBar()
+        header.add_css_class("flat")
+        content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+        content.set_hexpand(True)
+        content.set_vexpand(True)
+        content.append(header)
+        content.append(scroller)
+
+        # Keep the sidebar full-height; a window handle lets the user drag (and
+        # double-click to maximise) the window from the sidebar too.
+        sidebar_handle = Gtk.WindowHandle()
+        sidebar_handle.set_child(self.sidebar)
+
+        root = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        root.add_css_class("lw-root")
+        root.append(sidebar_handle)
+        root.append(content)
 
         self.toaster = Adw.ToastOverlay()
         self.toaster.set_child(root)
