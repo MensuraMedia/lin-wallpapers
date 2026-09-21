@@ -6,7 +6,16 @@ screen, no GRUB, no root, no daemon, no catalogue. This document covers both **h
 **the flat GTK 4 dashboard/sidebar GUI** built on
 [gtk-python-dashboard-starter](https://github.com/mikesdatawork/gtk-python-dashboard-starter) (Part B)._
 
-Status: **concept.** 2026-09-20. Environment-specific commands marked _(verify on target)_.
+Status: **concept + as-built.** 2026-09-20. Environment-specific commands marked _(verify on target)_.
+
+> **As built (2026-09-20).** The app shipped as `linwallpaper/` and went beyond this original concept in
+> two ways: (1) the **Screens** page became the whole app — every surface is a fixed-aspect *simulated
+> monitor* with per-card Fit/Apply/Open-image and a global Fit/Open-image/**Apply-to-all** bar; the
+> separate Preview page was dropped as redundant. (2) The **privileged surfaces** (login greeter, Plymouth
+> splash, GRUB) were added behind a **password** (in-app dialog → a reversible root helper with backups +
+> `--undo`, reproducing `reference/apply-08-screen-wallpaper.sh`), rather than being left out. The
+> canonical, current feature + OS-support reference is now the top-level **`README.md`**; the desktop
+> mechanism below is unchanged and accurate.
 
 ---
 
