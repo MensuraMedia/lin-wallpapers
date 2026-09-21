@@ -21,6 +21,15 @@ nothing to build and no virtualenv.
 python3 -m linwallpaper.main       # or: ./linwallpaper/run.sh — run without installing
 ```
 
+That's a **user-level, run-from-checkout** install (the menu entry points back at this tree). For a
+**system install** that copies the app out of the checkout, add `--system`:
+
+```bash
+sudo ./linwallpaper/install.sh --system                 # → /usr/local (or --prefix DIR)
+# installs /usr/local/lib/linwallpaper, a `linwallpaper` launcher on PATH, and the menu entry + icons
+sudo ./linwallpaper/install.sh --system --uninstall     # remove it
+```
+
 After installing, launch **LinWallpaper** from your applications menu (or the panel icon). See
 [Install & run](#install--run) below for requirements, and [Using it](#using-it) to get started.
 
@@ -120,11 +129,17 @@ tools (`lightdm`/`slick-greeter`, `plymouth` + `update-initramfs`, `grub` + `upd
 # run from a checkout
 python3 -m linwallpaper.main        # or: ./linwallpaper/run.sh
 
-# add a menu entry + icon (user-level; --uninstall to remove)
+# add a menu entry + icon (user-level, run-from-checkout; --uninstall to remove)
 ./linwallpaper/install.sh
+
+# OR a system install (copies the app out of the checkout, adds a `linwallpaper` launcher on PATH)
+sudo ./linwallpaper/install.sh --system            # --prefix DIR to change /usr/local; --uninstall to remove
 ```
 
-Uses your **system** python3 (PyGObject/GTK/Pillow are system packages) — no virtualenv.
+Uses your **system** python3 (PyGObject/GTK/Pillow are system packages) — no virtualenv. Both install
+modes are the same script; `--system` copies `linwallpaper/` to `PREFIX/lib/linwallpaper` and writes a
+launcher, so the app no longer depends on the checkout (the “Add to LinWallpaper” action installed from
+Settings points at the installed copy automatically).
 
 ## Using it
 

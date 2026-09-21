@@ -1,40 +1,68 @@
 #!/usr/bin/env bash
 #
-# install.sh — user-level desktop integration for LinWallpaper.
+# install.sh — desktop integration for LinWallpaper.
 #
-# Installs the application icon (into the hicolor icon theme) and the .desktop
-# entry (into the applications menu) under $XDG_DATA_HOME (or ~/.local/share),
-# then refreshes the icon and desktop caches. It does NOT install the Python
-# app itself: the .desktop Exec points back at this checkout's run.sh, which
-# launches `python3 -m linwallpaper.main` with the system Python.
+# Two modes:
+#
+#   (default) user-level — install the .desktop entry + icons under
+#             $XDG_DATA_HOME (or ~/.local/share) and point Exec at THIS
+#             checkout's run.sh (run-from-checkout). No root.
+#
+#   --system  system install — copy the Python package to
+#             PREFIX/lib/linwallpaper, install a PREFIX/bin/linwallpaper
+#             launcher, and the .desktop + icons under PREFIX/share. The app
+#             then runs independently of this checkout. Needs write access to
+#             PREFIX (usually via sudo). Default PREFIX=/usr/local.
 #
 # In keeping with the project's first rule, nothing here installs a service,
-# daemon, autostart entry or login hook.
+# daemon, autostart entry or login hook. The "Add to LinWallpaper" file-manager
+# menu is a separate, runtime, user-level toggle in the app's Settings.
 #
 # Usage:
 #   ./install.sh [--exec CMD] [--uninstall] [-h|--help]
-#
-#   --exec CMD   Command the .desktop entry runs (default: this tree's run.sh)
-#   --uninstall  Remove what a matching install placed
-#   -h, --help   Show this help
+#   ./install.sh --system [--prefix DIR] [--uninstall]
 #
 set -eu
 
 APP_ID="io.mensuramedia.LinWallpaper"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"     # the linwallpaper/ package dir
+CHECKOUT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"   # the dir that CONTAINS the package
 ICON_SIZES="16 22 24 32 48 64 128 256"
 
 EXEC_CMD=""
 ACTION="install"
+MODE="user"
+PREFIX="/usr/local"
 
 usage() {
-    sed -n '2,26p' "$0" | sed 's/^# \{0,1\}//'
+    cat <<'EOF'
+install.sh — desktop integration for LinWallpaper
+
+Default (user-level): install the .desktop + icons under $XDG_DATA_HOME and
+point Exec at this checkout's run.sh (run-from-checkout).
+    ./install.sh [--exec CMD] [--uninstall]
+
+--system: copy the package to PREFIX/lib/linwallpaper, install a
+PREFIX/bin/linwallpaper launcher, and .desktop + icons under PREFIX/share
+(independent of this checkout; needs write access to PREFIX — usually sudo).
+    ./install.sh --system [--prefix DIR] [--uninstall]
+
+Options:
+    --exec CMD    Command the user-level .desktop runs (default: this tree's run.sh)
+    --system      System install (see above)
+    --prefix DIR  Install prefix for --system (default: /usr/local)
+    --uninstall   Remove what a matching install placed
+    -h, --help    Show this help
+EOF
 }
 
 while [ $# -gt 0 ]; do
     case "$1" in
         --exec)      shift; EXEC_CMD="${1:?--exec needs a command}" ;;
         --exec=*)    EXEC_CMD="${1#--exec=}" ;;
+        --system)    MODE="system" ;;
+        --prefix)    shift; PREFIX="${1:?--prefix needs a directory}" ;;
+        --prefix=*)  PREFIX="${1#--prefix=}" ;;
         --uninstall) ACTION="uninstall" ;;
         -h|--help)   usage; exit 0 ;;
         *) printf 'install.sh: unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
@@ -42,7 +70,15 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
+# ---- resolve destinations per mode ---------------------------------------
+if [ "$MODE" = "system" ]; then
+    DATA_DIR="$PREFIX/share"
+    BIN_DIR="$PREFIX/bin"
+    PKG_PARENT="$PREFIX/lib/linwallpaper"       # goes on PYTHONPATH; holds linwallpaper/
+    LAUNCHER="$BIN_DIR/linwallpaper"
+else
+    DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
+fi
 ICON_ROOT="$DATA_DIR/icons/hicolor"
 APP_DIR="$DATA_DIR/applications"
 SCALABLE="$ICON_ROOT/scalable/apps/$APP_ID.svg"
@@ -86,13 +122,7 @@ rasterize() {
     return 0
 }
 
-do_install() {
-    for f in "$SRC_SCALABLE" "$SRC_SYMBOLIC" "$SRC_DESKTOP"; do
-        [ -f "$f" ] || { printf 'install.sh: missing source file: %s\n' "$f" >&2; exit 1; }
-    done
-
-    exec_line="${EXEC_CMD:-$SCRIPT_DIR/run.sh}"
-
+install_icons() {
     install -Dm644 "$SRC_SCALABLE" "$SCALABLE"
     install -Dm644 "$SRC_SYMBOLIC" "$SYMBOLIC"
 
@@ -114,11 +144,14 @@ do_install() {
     else
         printf 'No PNG icons shipped and no SVG rasteriser — scalable SVG only.\n' >&2
     fi
+}
 
+install_desktop() {
+    # $1 = the Exec command line to record.
     tmp="$(mktemp)"
     trap 'rm -f "$tmp"' EXIT
     grep -v '^Exec=' "$SRC_DESKTOP" > "$tmp"
-    printf 'Exec=%s\n' "$exec_line" >> "$tmp"
+    printf 'Exec=%s\n' "$1" >> "$tmp"
     install -Dm644 "$tmp" "$DESKTOP_DEST"
     rm -f "$tmp"
     trap - EXIT
@@ -127,9 +160,59 @@ do_install() {
         desktop-file-validate "$DESKTOP_DEST" || \
             printf 'install.sh: desktop-file-validate reported warnings (non-fatal).\n' >&2
     fi
+}
 
+install_package() {
+    # Copy the package to PKG_PARENT/linwallpaper (excluding tests + caches) and
+    # write a launcher that runs it with the right PYTHONPATH.
+    install -d "$PKG_PARENT"
+    rm -rf "${PKG_PARENT:?}/linwallpaper"
+    ( cd "$CHECKOUT_ROOT" && tar --exclude='__pycache__' --exclude='linwallpaper/tests' -cf - linwallpaper ) \
+        | ( cd "$PKG_PARENT" && tar -xf - )
+
+    install -d "$BIN_DIR"
+    tmp="$(mktemp)"
+    trap 'rm -f "$tmp"' EXIT
+    {
+        printf '#!/bin/sh\n'
+        printf '# LinWallpaper launcher (system install)\n'
+        printf 'exec env PYTHONPATH="%s" python3 -m linwallpaper.main "$@"\n' "$PKG_PARENT"
+    } > "$tmp"
+    install -Dm755 "$tmp" "$LAUNCHER"
+    rm -f "$tmp"
+    trap - EXIT
+}
+
+require_writable_prefix() {
+    d="$PREFIX"
+    while [ ! -e "$d" ]; do d="$(dirname "$d")"; done
+    if [ ! -w "$d" ]; then
+        printf 'install.sh: %s is not writable — re-run with sudo, or pass --prefix DIR.\n' "$PREFIX" >&2
+        exit 1
+    fi
+}
+
+do_install() {
+    for f in "$SRC_SCALABLE" "$SRC_SYMBOLIC" "$SRC_DESKTOP"; do
+        [ -f "$f" ] || { printf 'install.sh: missing source file: %s\n' "$f" >&2; exit 1; }
+    done
+
+    if [ "$MODE" = "system" ]; then
+        install_package
+        exec_line="$LAUNCHER"
+    else
+        exec_line="${EXEC_CMD:-$SCRIPT_DIR/run.sh}"
+    fi
+
+    install_icons
+    install_desktop "$exec_line"
     refresh_caches
-    printf 'Installed LinWallpaper desktop integration:\n'
+
+    printf 'Installed LinWallpaper (%s):\n' "$MODE"
+    if [ "$MODE" = "system" ]; then
+        printf '  package %s/linwallpaper\n' "$PKG_PARENT"
+        printf '  launcher %s\n' "$LAUNCHER"
+    fi
     printf '  icon    %s\n' "$SCALABLE"
     printf '  desktop %s  (Exec=%s)\n' "$DESKTOP_DEST" "$exec_line"
 }
@@ -139,9 +222,17 @@ do_uninstall() {
     for size in $ICON_SIZES; do
         rm -f "$ICON_ROOT/${size}x${size}/apps/$APP_ID.png"
     done
+    if [ "$MODE" = "system" ]; then
+        rm -f "$LAUNCHER"
+        rm -rf "${PKG_PARENT:?}"
+    fi
     refresh_caches
-    printf 'Removed LinWallpaper desktop integration from %s\n' "$DATA_DIR"
+    printf 'Removed LinWallpaper (%s) from %s\n' "$MODE" "$DATA_DIR"
 }
+
+if [ "$MODE" = "system" ]; then
+    require_writable_prefix
+fi
 
 case "$ACTION" in
     install)   do_install ;;
