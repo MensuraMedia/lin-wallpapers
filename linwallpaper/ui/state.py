@@ -20,6 +20,9 @@ class AppState:
         self.fit: str = imaging.FIT_FILL
         self.target: str = "all"  # "all" or a connector name
         self.per_screen: dict[str, str] = {}  # connector -> image path
+        # Per-surface image OVERRIDES, keyed by surface key (connector/lock/login…).
+        # A surface with no entry here falls back to the global ``image_path``.
+        self.surface_image: dict[str, str] = {}
         self.applied: dict[str, str] = {}  # target ("all"/connector) -> applied image path
         self.last_apply = None  # ApplyResult, for Undo
         self._listeners: list[Callable[[], None]] = []
@@ -44,3 +47,16 @@ class AppState:
     def set_target(self, target: str) -> None:
         self.target = target
         self.notify()
+
+    # ---- per-surface image overrides -------------------------------------
+    def resolved_image(self, key: str) -> str | None:
+        """The image a surface uses: its own override if set, else the global one."""
+        return self.surface_image.get(key) or self.image_path
+
+    def set_surface_image(self, key: str, path: str) -> None:
+        """Give one surface its own image (does not touch the global image)."""
+        self.surface_image[key] = path
+
+    def clear_surface_images(self) -> None:
+        """Drop every per-surface override so all surfaces follow the global image."""
+        self.surface_image.clear()

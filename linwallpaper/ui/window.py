@@ -135,13 +135,17 @@ class AppWindow(Adw.ApplicationWindow):
             self.state.set_image(path)
         return True
 
-    def apply(self, target: str) -> None:
-        if not self.state.image_path or not self.state.backend:
+    def apply(self, target: str, image: str | None = None, fit: str | None = None) -> None:
+        # ``image``/``fit`` let a per-surface Apply pass its own resolved image and
+        # fit; they default to the global state so existing callers are unchanged.
+        image = image or self.state.image_path
+        fit = fit or self.state.fit
+        if not image or not self.state.backend:
             self.toast("Nothing to apply")
             return
         try:
             result = self.state.backend.apply(
-                self.state.image_path, self.state.fit, self.state.monitors, target
+                image, fit, self.state.monitors, target
             )
         except Exception as exc:  # surface the failure, do not pretend success
             self.toast(f"Apply failed: {exc}")

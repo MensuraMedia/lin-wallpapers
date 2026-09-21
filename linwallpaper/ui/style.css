@@ -100,6 +100,14 @@ window.linwallpaper,
   font-weight: 700; border-radius: 10px; padding: 8px 16px;
 }
 
+/* global control bar above the surface grid — flat card / toolbar */
+.lw-toolbar {
+  background-color: @lw_surface;
+  border: 1px solid @lw_line;
+  border-radius: 14px;
+  padding: 12px 16px;
+}
+
 .lw-screen-card {
   background-color: @lw_surface;
   border: 1px solid @lw_line;

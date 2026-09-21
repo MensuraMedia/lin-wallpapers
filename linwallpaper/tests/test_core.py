@@ -150,3 +150,38 @@ def test_cinnamon_apply_all_uses_injected_runner(sample):
     assert any(c[3] == "picture-uri" and c[4].startswith("file://") for c in sets)
     assert any(c[3] == "picture-options" and c[4] == "zoom" for c in sets)
     assert result.previous["picture-uri"] == "file:///old.png"
+
+
+# ---- per-surface image overrides (gi-free AppState) ----------------------
+def _state():
+    from linwallpaper.ui.state import AppState
+
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    return AppState(backend=None, monitors=monitors, desktop="Test")
+
+
+def test_resolved_image_is_override_or_global():
+    st = _state()
+    # No image anywhere -> None.
+    assert st.resolved_image("DP-1") is None
+    # Global only -> every surface resolves to the global image.
+    st.set_image("/img/global.png")
+    assert st.resolved_image("DP-1") == "/img/global.png"
+    assert st.resolved_image("login") == "/img/global.png"
+    # An override wins for its own surface, others still follow the global.
+    st.set_surface_image("login", "/img/login.png")
+    assert st.resolved_image("login") == "/img/login.png"
+    assert st.resolved_image("DP-1") == "/img/global.png"
+
+
+def test_set_surface_image_touches_only_that_surface():
+    st = _state()
+    st.set_image("/img/global.png")
+    st.set_surface_image("splash", "/img/splash.png")
+    # Only "splash" has an override; the global image is unchanged.
+    assert st.surface_image == {"splash": "/img/splash.png"}
+    assert st.image_path == "/img/global.png"
+    # Clearing overrides makes every surface follow the global again.
+    st.clear_surface_images()
+    assert st.surface_image == {}
+    assert st.resolved_image("splash") == "/img/global.png"

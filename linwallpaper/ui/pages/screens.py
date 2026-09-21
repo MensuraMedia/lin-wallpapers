@@ -20,7 +20,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from gi.repository import Gtk
+from gi.repository import Gtk, Pango
 
 from ... import imaging
 from ..monitor_frame import MonitorFrame
@@ -47,6 +47,13 @@ class ScreensPage(BasePage):
         self._fits: dict[str, str] = getattr(self, "_fits", {})
         # key -> (frame, ratio, image-path-getter) for live re-render on fit change.
         self._previews: dict[str, tuple] = {}
+        # key -> {"apply_btn", "chip"} so a per-card Open can refresh just that card.
+        self._card_ui: dict[str, dict] = {}
+        # buttons of the global FIT segmented control, kept in sync on refresh().
+        self._global_fit_btns: dict[str, Gtk.ToggleButton] = {}
+
+        outer = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        outer.append(self._build_control_bar())
 
         self.flow = Gtk.FlowBox()
         self.flow.set_valign(Gtk.Align.START)
@@ -57,11 +64,69 @@ class ScreensPage(BasePage):
         self.flow.set_homogeneous(False)
         self.flow.set_selection_mode(Gtk.SelectionMode.NONE)
         self._rebuild()
-        return self.flow
+        outer.append(self.flow)
+        return outer
+
+    # ---- global control bar (fit-for-all / open-for-all / apply-to-all) ----
+    def _build_control_bar(self) -> Gtk.Widget:
+        bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+        bar.add_css_class("lw-toolbar")
+
+        fit_lbl = Gtk.Label(label="FIT")
+        fit_lbl.add_css_class("lw-label")
+        fit_lbl.set_valign(Gtk.Align.CENTER)
+        bar.append(fit_lbl)
+        bar.append(self._build_global_fit())
+
+        open_btn = Gtk.Button(label="+  Open image…")
+        open_btn.add_css_class("lw-ghost")
+        open_btn.set_valign(Gtk.Align.CENTER)
+        open_btn.connect("clicked", self._on_open_global)
+        bar.append(open_btn)
+
+        self._global_chip = Gtk.Label(label=self._global_chip_text())
+        self._global_chip.add_css_class("lw-chip")
+        self._global_chip.set_valign(Gtk.Align.CENTER)
+        self._global_chip.set_ellipsize(Pango.EllipsizeMode.END)
+        self._global_chip.set_max_width_chars(24)
+        bar.append(self._global_chip)
+
+        spacer = Gtk.Box()
+        spacer.set_hexpand(True)
+        bar.append(spacer)
+
+        self._apply_all_btn = Gtk.Button(label="Apply to all")
+        self._apply_all_btn.add_css_class("lw-primary")
+        self._apply_all_btn.set_valign(Gtk.Align.CENTER)
+        self._apply_all_btn.set_sensitive(bool(self.state.image_path and self.state.backend))
+        self._apply_all_btn.connect("clicked", self._on_apply_all)
+        bar.append(self._apply_all_btn)
+        return bar
+
+    def _build_global_fit(self) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        box.add_css_class("lw-seg")
+        first = None
+        for fit in imaging.FITS:
+            btn = Gtk.ToggleButton(label=imaging.FIT_LABELS[fit])
+            btn.set_has_frame(False)
+            if first is None:
+                first = btn
+            else:
+                btn.set_group(first)
+            btn.set_active(fit == self.state.fit)
+            btn.connect("toggled", self._on_global_fit, fit)
+            self._global_fit_btns[fit] = btn
+            box.append(btn)
+        return box
+
+    def _global_chip_text(self) -> str:
+        return Path(self.state.image_path).name if self.state.image_path else "No image"
 
     # ---- build ------------------------------------------------------------
     def _rebuild(self) -> None:
         self._previews = {}
+        self._card_ui = {}
         child = self.flow.get_first_child()
         while child:
             self.flow.remove(child)
@@ -82,7 +147,7 @@ class ScreensPage(BasePage):
         applied = self._is_applied(mon.name)
 
         def image_for() -> str | None:
-            return self.state.image_path or current
+            return self.state.resolved_image(key) or current
 
         badges = []
         if mon.primary:
@@ -90,7 +155,7 @@ class ScreensPage(BasePage):
         if applied:
             badges.append(("● APPLIED", "lw-badge-good"))
 
-        can_apply = bool(self.state.image_path and self.state.backend)
+        can_apply = bool(self.state.resolved_image(key) and self.state.backend)
         meta = f"Desktop · {mon.px_width} × {mon.px_height} · scale {mon.scale}×"
         return self._surface_card(
             key=key,
@@ -109,9 +174,9 @@ class ScreensPage(BasePage):
         ratio = self._aspect(primary) if primary else 16 / 9
 
         def image_for() -> str | None:
-            return self.state.image_path or current
+            return self.state.resolved_image("lock") or current
 
-        can_apply = bool(self.state.image_path and self.state.backend)
+        can_apply = bool(self.state.resolved_image("lock") and self.state.backend)
         return self._surface_card(
             key="lock",
             title="Lock screen",
@@ -130,9 +195,9 @@ class ScreensPage(BasePage):
         ratio = self._aspect(primary) if primary else 16 / 9
 
         def image_for() -> str | None:
-            return self.state.image_path
+            return self.state.resolved_image(surface_id)
 
-        can_apply = bool(self.state.image_path)
+        can_apply = bool(self.state.resolved_image(surface_id))
         return self._surface_card(
             key=surface_id,
             title=title,
@@ -218,6 +283,30 @@ class ScreensPage(BasePage):
             caption.add_css_class("lw-caption")
             apply_area.append(caption)
         left.append(apply_area)
+
+        # Per-surface "Open image…" — gives THIS surface its own image, under the
+        # Fit control and Apply button. Each screen can therefore carry a different
+        # image; a small chip shows which image the card is currently using.
+        open_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        open_row.set_halign(Gtk.Align.END)
+        open_btn = Gtk.Button(label="+  Open image…")
+        open_btn.add_css_class("lw-ghost")
+        open_btn.connect("clicked", lambda *_: self._on_open_surface(key))
+        open_row.append(open_btn)
+        left.append(open_row)
+
+        img_chip = Gtk.Label(label=self._card_chip_text(key), xalign=1.0)
+        img_chip.add_css_class("lw-chip")
+        img_chip.set_halign(Gtk.Align.END)
+        img_chip.set_ellipsize(Pango.EllipsizeMode.END)
+        img_chip.set_max_width_chars(22)
+        left.append(img_chip)
+
+        self._card_ui[key] = {
+            "apply_btn": apply_btn,
+            "chip": img_chip,
+            "needs_backend": not requires_password,
+        }
 
         body.append(left)
 
@@ -319,25 +408,104 @@ class ScreensPage(BasePage):
             self._fits[key] = fit
             self._render_preview(key)
 
-    def _apply_desktop(self, fit_key: str, target: str) -> None:
-        # Apply via the desktop backend at this surface's chosen fit (no password).
-        self.state.fit = self._fits.get(fit_key, imaging.FIT_FILL)
+    def _on_global_fit(self, btn, fit: str) -> None:
+        # Set the fit for ALL surfaces: update the global fit and every per-surface
+        # fit, then rebuild so every card's segmented control and preview follow.
+        if not btn.get_active():
+            return
+        self.state.fit = fit
+        for key in list(self._previews.keys()):
+            self._fits[key] = fit
+        self._rebuild()
+
+    def _on_open_global(self, *_a) -> None:
+        # Set the GLOBAL image and clear every per-surface override so all cards
+        # follow it. ``set_image`` notifies -> refresh() rebuilds every card.
+        self.win.open_image_dialog(on_chosen=self._set_global_image)
+
+    def _set_global_image(self, path: str) -> None:
+        self.state.clear_surface_images()
+        self.state.set_image(path)  # notify() -> refresh() rebuilds all cards
+
+    def _on_open_surface(self, key: str) -> None:
+        self.win.open_image_dialog(on_chosen=lambda p: self._set_surface_image(key, p))
+
+    def _set_surface_image(self, key: str, path: str) -> None:
+        # Only this surface changes; re-render just this card (preview + chip).
+        self.state.set_surface_image(key, path)
+        self._refresh_card(key)
+
+    def _refresh_card(self, key: str) -> None:
+        self._render_preview(key)
+        ui = self._card_ui.get(key)
+        if not ui:
+            return
+        ui["chip"].set_text(self._card_chip_text(key))
+        resolved = self.state.resolved_image(key)
+        ok = bool(resolved) and (bool(self.state.backend) if ui["needs_backend"] else True)
+        ui["apply_btn"].set_sensitive(ok)
+
+    def _on_apply_all(self, *_a) -> None:
+        # Apply the GLOBAL image at the global fit to every Desktop monitor + Lock,
+        # via the desktop backend (no password). The privileged Login/Boot surfaces
+        # are deliberately NOT touched — they each need their own password apply.
+        if not self.state.image_path or not self.state.backend:
+            self.win.toast("Choose an image first")
+            return
+        image = self.state.image_path
+        fit = self.state.fit
+        for mon in self.state.monitors:
+            self.win.apply(mon.name, image=image, fit=fit)  # each desktop monitor
+        self.win.apply("all", image=image, fit=fit)  # lock mirrors the primary desktop
+        # Every card now follows the global image again.
+        self.state.clear_surface_images()
+        self.win.toast(
+            "Applied to desktop + lock. Use each screen's Apply for login/boot (password)."
+        )
+        self._rebuild()
+
+    def _card_chip_text(self, key: str) -> str:
+        override = self.state.surface_image.get(key)
+        if override:
+            return Path(override).name
+        if self.state.image_path:
+            return f"Global · {Path(self.state.image_path).name}"
+        return "No image"
+
+    def _apply_desktop(self, key: str, target: str) -> None:
+        # Apply via the desktop backend at this surface's chosen fit and its resolved
+        # (override-or-global) image (no password).
+        image = self.state.resolved_image(key)
+        if not image:
+            self.win.toast(_NO_IMAGE_HINT)
+            return
+        fit = self._fits.get(key, imaging.FIT_FILL)
+        self.state.fit = fit
         self.state.target = target
-        self.win.apply(target)
+        self.win.apply(target, image=image, fit=fit)
         self._rebuild()
 
     def _apply_privileged(self, surface_id: str) -> None:
-        if not self.state.image_path:
+        image = self.state.resolved_image(surface_id)
+        if not image:
             self.win.toast(_NO_IMAGE_HINT)
             return
         fit = self._fits.get(surface_id, imaging.FIT_FILL)
         run_privileged(
             self.win,
             surface_id,
-            self.state.image_path,
+            image,
             fit,
             res=self._res(),
         )
 
     def refresh(self) -> None:
+        # Keep the global bar's fit + chip in sync with state, then rebuild the grid.
+        for fit, btn in getattr(self, "_global_fit_btns", {}).items():
+            if fit == self.state.fit and not btn.get_active():
+                btn.set_active(True)
+        if hasattr(self, "_global_chip"):
+            self._global_chip.set_text(self._global_chip_text())
+        if hasattr(self, "_apply_all_btn"):
+            self._apply_all_btn.set_sensitive(bool(self.state.image_path and self.state.backend))
         self._rebuild()
