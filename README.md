@@ -146,3 +146,10 @@ linwallpaper/
 - Design & reference: [`docs/design/minimal-gtk4-app.md`](docs/design/minimal-gtk4-app.md) (as-built),
   [`docs/design/cross-distro-apply.md`](docs/design/cross-distro-apply.md) (making the privileged apply
   universal), `docs/STATUS.md` (handoff), `reference/` (the origin shell script).
+
+## License
+
+Licensed under the [**PolyForm Noncommercial License 1.0.0**](LICENSE). You may use, copy, modify and
+distribute it for any **noncommercial** purpose. **Commercial use is prohibited without express written
+permission** from the copyright holder — request one at <https://github.com/MensuraMedia>. Third-party
+components carry their own terms; see [`NOTICE`](NOTICE).
