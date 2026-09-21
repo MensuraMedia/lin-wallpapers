@@ -120,9 +120,12 @@ A new page `ui/pages/wallpaper.py` (`route="wallpaper"`), registered in `window.
 - **Add controls** at the top: **Add images…** (multi-select file dialog) and **Add folder…**
   (folder dialog) — the in-app equivalent of the context menu, so the feature works even without
   the file-manager integration installed.
-- **Refresh**: the page re-reads the index in `refresh()` (called on navigation), so images added
-  by the context menu while the app is open show up when the user returns to the page. Live
-  file-watching is a future refinement (§8).
+- **Refresh (live)**: the page watches the library directory with a `Gio.FileMonitor` and reloads +
+  repopulates whenever `collection.json` changes, so an image added by the context menu (a *separate*
+  `addcli` process) appears **instantly**, without a restart or navigation. `refresh()` also reloads
+  from disk on navigation, and the picker reloads before it lists. (The in-memory `Collection` caches
+  its list, so a plain re-render would not see external writes — `Collection.reload()` re-reads the
+  index; this was a real bug, now fixed.)
 
 ---
 
@@ -277,8 +280,8 @@ entry), not by green tests alone — the standing lesson of this project.
 - **Multiple named collections** ("Nature", "Work") vs. today's single flat library. The index
   format has a `version` field and room for a `collections: []` grouping later.
 - **Recursive folder add** as an opt-in ("include sub-folders").
-- **Live sync**: watch `collection.json` (a `Gio.FileMonitor`) so context-menu adds appear in an
-  open window instantly, instead of on next page visit.
+- ~~**Live sync**: watch `collection.json` so context-menu adds appear in an open window instantly.~~
+  **Done** — the Wallpaper page uses a `Gio.FileMonitor` on the library dir (see §3).
 - **Reorder / favourite / tags** on tiles.
 - **Import-a-copy** option (for images on removable media) — off by default to preserve the
   non-destructive rule.

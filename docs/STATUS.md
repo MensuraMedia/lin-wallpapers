@@ -24,6 +24,7 @@ and kept only for history (see the note at the bottom). Latest commit: `8059381`
 | **Screens → Image** now opens a **wallpaper picker** (the library as thumbnails) with a **Browse files…** fallback | ✅ verified (screenshot) |
 | **Settings → Integration** toggle installs an **"Add to LinWallpaper"** file-manager right-click action (Nemo live; Nautilus/Thunar/Dolphin providers built) | ✅ Nemo verified; others built |
 | **`python3 -m linwallpaper.addcli <paths>`** — the CLI the context action calls; adds files/folders to the library | ✅ verified |
+| **Live-refresh** — the Wallpaper page watches the library dir (`Gio.FileMonitor`); a file-manager "Add to LinWallpaper" appears **instantly**, no restart/navigation | ✅ verified (screenshots) |
 | Each card meta: **Supported file types** + **Current resolution** under the screen name | ✅ |
 | Controls in **Image → Fit → Apply** order (per card and the global bar; Image shows the chosen filename) | ✅ |
 | Global bar (**Image** + **Fit** + **Apply to all** → every desktop monitor + lock) | ✅ |
