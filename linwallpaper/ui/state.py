@@ -6,13 +6,27 @@ Keeping it separate from widgets keeps the viewmodel testable.
 
 from __future__ import annotations
 
+import json
+import os
 from collections.abc import Callable
+from pathlib import Path
 
 from .. import imaging
 
+# The privileged (root-owned) surfaces whose last-applied image is persisted:
+# the app cannot read these back from the system, so we remember what we wrote.
+_PRIVILEGED_SURFACES = ("login", "splash", "grub")
+
+
+def _default_config_dir() -> Path:
+    """``$XDG_CONFIG_HOME/linwallpaper`` (or ``~/.config/linwallpaper``)."""
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    base = Path(xdg) if xdg else Path.home() / ".config"
+    return base / "linwallpaper"
+
 
 class AppState:
-    def __init__(self, backend, monitors, desktop) -> None:
+    def __init__(self, backend, monitors, desktop, config_dir=None) -> None:
         self.backend = backend
         self.monitors = monitors
         self.desktop = desktop
@@ -26,6 +40,10 @@ class AppState:
         self.applied: dict[str, str] = {}  # target ("all"/connector) -> applied image path
         self.last_apply = None  # ApplyResult, for Undo
         self._listeners: list[Callable[[], None]] = []
+        # Persisted last-applied image/fit for the privileged surfaces only.
+        self._config_dir = Path(config_dir) if config_dir else _default_config_dir()
+        self._applied_file = self._config_dir / "applied.json"
+        self._applied_persisted: dict[str, dict] = self._load_applied()
 
     def subscribe(self, fn: Callable[[], None]) -> None:
         self._listeners.append(fn)
@@ -60,3 +78,48 @@ class AppState:
     def clear_surface_images(self) -> None:
         """Drop every per-surface override so all surfaces follow the global image."""
         self.surface_image.clear()
+
+    # ---- persisted last-applied image (privileged surfaces only) ----------
+    def _load_applied(self) -> dict[str, dict]:
+        """Read ``applied.json``; tolerate a missing/corrupt file (→ empty)."""
+        try:
+            data = json.loads(self._applied_file.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return {}
+        if not isinstance(data, dict):
+            return {}
+        out: dict[str, dict] = {}
+        for surface in _PRIVILEGED_SURFACES:
+            entry = data.get(surface)
+            if isinstance(entry, dict) and isinstance(entry.get("image"), str):
+                fit = entry.get("fit")
+                out[surface] = {
+                    "image": entry["image"],
+                    "fit": fit if fit in imaging.FITS else imaging.FIT_FILL,
+                }
+        return out
+
+    def _save_applied(self) -> None:
+        """Write ``applied.json`` atomically (temp + replace); dir mode 0700."""
+        try:
+            self._config_dir.mkdir(mode=0o700, parents=True, exist_ok=True)
+            tmp = self._applied_file.with_name(self._applied_file.name + ".tmp")
+            tmp.write_text(json.dumps(self._applied_persisted, indent=2), encoding="utf-8")
+            tmp.replace(self._applied_file)
+        except OSError:
+            pass
+
+    def record_applied(self, surface: str, image: str, fit: str) -> None:
+        """Persist a privileged surface's last-applied image + fit to disk."""
+        self._applied_persisted[surface] = {"image": image, "fit": fit}
+        self._save_applied()
+
+    def applied_image(self, surface: str) -> str | None:
+        """The last-applied image path persisted for ``surface`` (or None)."""
+        entry = self._applied_persisted.get(surface)
+        return entry.get("image") if entry else None
+
+    def applied_fit(self, surface: str) -> str | None:
+        """The fit persisted alongside ``surface``'s last-applied image (or None)."""
+        entry = self._applied_persisted.get(surface)
+        return entry.get("fit") if entry else None

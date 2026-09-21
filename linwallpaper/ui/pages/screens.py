@@ -217,8 +217,22 @@ class ScreensPage(BasePage):
     def _privileged_card(self, title: str, owner: str, surface_id: str):
         ratio = self._uniform_ratio()
 
+        # The system can't read these surfaces back, so seed this card's fit from
+        # the persisted last-applied fit (unless the user already picked one).
+        persisted_fit = self.state.applied_fit(surface_id)
+        if persisted_fit and surface_id not in self._fits:
+            self._fits[surface_id] = persisted_fit
+
         def image_for() -> str | None:
-            return self.state.resolved_image(surface_id)
+            # In-session override/global wins; else the persisted last-applied
+            # image (if the file still exists); else a placeholder (None).
+            resolved = self.state.resolved_image(surface_id)
+            if resolved:
+                return resolved
+            persisted = self.state.applied_image(surface_id)
+            if persisted and Path(persisted).exists():
+                return persisted
+            return None
 
         can_apply = bool(self.state.resolved_image(surface_id))
         return self._surface_card(
@@ -541,7 +555,14 @@ class ScreensPage(BasePage):
             image,
             fit,
             res=self._res(),
+            on_success=lambda: self._on_privileged_applied(surface_id, image, fit),
         )
+
+    def _on_privileged_applied(self, surface_id: str, image: str, fit: str) -> None:
+        # Persist what we just wrote to root so the card can show it next launch
+        # (and after a reboot), then refresh this card's preview + controls.
+        self.state.record_applied(surface_id, image, fit)
+        self._refresh_card(surface_id)
 
     def refresh(self) -> None:
         # Keep the global bar's fit + chip in sync with state, then rebuild the grid.

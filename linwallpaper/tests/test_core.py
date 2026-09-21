@@ -185,3 +185,56 @@ def test_set_surface_image_touches_only_that_surface():
     st.clear_surface_images()
     assert st.surface_image == {}
     assert st.resolved_image("splash") == "/img/global.png"
+
+
+# ---- persisted last-applied image for privileged surfaces ----------------
+def _state_cfg(config_dir):
+    from linwallpaper.ui.state import AppState
+
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    return AppState(backend=None, monitors=monitors, desktop="Test", config_dir=config_dir)
+
+
+def test_record_applied_writes_json_and_reloads(tmp_path):
+    import json
+
+    st = _state_cfg(tmp_path)
+    st.record_applied("login", "/abs/login.png", imaging.FIT_FIT)
+
+    # The file exists at applied.json with the expected shape.
+    applied_file = tmp_path / "applied.json"
+    assert applied_file.exists()
+    data = json.loads(applied_file.read_text())
+    assert data["login"] == {"image": "/abs/login.png", "fit": imaging.FIT_FIT}
+
+    # A fresh AppState pointed at the same dir loads the persisted entry.
+    fresh = _state_cfg(tmp_path)
+    assert fresh.applied_image("login") == "/abs/login.png"
+    assert fresh.applied_fit("login") == imaging.FIT_FIT
+    # Surfaces with nothing persisted return None.
+    assert fresh.applied_image("splash") is None
+    assert fresh.applied_fit("grub") is None
+
+
+def test_applied_missing_file_is_empty(tmp_path):
+    st = _state_cfg(tmp_path / "nonexistent")
+    assert st.applied_image("login") is None
+    assert st.applied_fit("login") is None
+
+
+def test_applied_corrupt_file_is_empty(tmp_path):
+    (tmp_path / "applied.json").write_text("{ this is not valid json ]")
+    st = _state_cfg(tmp_path)
+    assert st.applied_image("login") is None
+
+
+def test_applied_only_privileged_surfaces_loaded(tmp_path):
+    import json
+
+    # A file with a desktop entry + a good login entry: only login survives.
+    (tmp_path / "applied.json").write_text(
+        json.dumps({"DP-1": {"image": "/x.png"}, "login": {"image": "/l.png", "fit": "fill"}})
+    )
+    st = _state_cfg(tmp_path)
+    assert st.applied_image("login") == "/l.png"
+    assert st.applied_image("DP-1") is None

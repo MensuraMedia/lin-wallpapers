@@ -214,11 +214,14 @@ def run_privileged(
     image: str,
     fit: str,
     res: str = "1920x1080",
+    on_success: Callable[[], None] | None = None,
 ) -> PasswordDialog:
     """Open the password dialog and, on confirm, run the helper as root.
 
     ``win`` is the :class:`AppWindow` (used for ``toast`` and as the modal
-    parent). Returns the dialog so callers/tests can inspect it.
+    parent). ``on_success`` — if given — is invoked on the GTK main thread only
+    when the privileged apply succeeds (lets the page persist what it wrote).
+    Returns the dialog so callers/tests can inspect it.
     """
     method = detect_auth_method()
     argv = build_command(method, _helper_argv(surface, image, fit, res))
@@ -228,8 +231,10 @@ def run_privileged(
         win.toast(f"Applying to {where}…")
 
         def worker() -> None:
-            _ok, message = _run_privileged_blocking(method, argv, password)
-            # Back to the GTK main thread for the toast (message covers both cases).
+            ok, message = _run_privileged_blocking(method, argv, password)
+            # Back to the GTK main thread: persist-on-success, then toast.
+            if ok and on_success is not None:
+                GLib.idle_add(on_success)
             GLib.idle_add(win.toast, message)
 
         threading.Thread(target=worker, daemon=True).start()

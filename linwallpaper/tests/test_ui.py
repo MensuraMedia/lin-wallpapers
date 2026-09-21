@@ -137,11 +137,11 @@ class _StubWin:
         pass
 
 
-def _make_page(monitors, backend, image_path=None, win=None):
+def _make_page(monitors, backend, image_path=None, win=None, config_dir=None):
     from linwallpaper.ui.pages.screens import ScreensPage
     from linwallpaper.ui.state import AppState
 
-    state = AppState(backend=backend, monitors=monitors, desktop="Test")
+    state = AppState(backend=backend, monitors=monitors, desktop="Test", config_dir=config_dir)
     if image_path:
         state.image_path = image_path
     return ScreensPage(state, win or _StubWin())
@@ -321,6 +321,73 @@ def test_screens_apply_to_all_needs_an_image():
     # Nothing applied; the user is told to choose an image first.
     assert win.applies == []
     assert any("Choose an image" in m for m in win.toasts)
+
+
+def test_privileged_card_prefers_persisted_applied_image(tmp_path):
+    # No global/override image, but "login" has a persisted last-applied image
+    # that still exists on disk: the login card's preview getter resolves to it.
+    login_img = tmp_path / "login.png"
+    Image.new("RGB", (640, 480), (90, 30, 60)).save(login_img)
+    import json
+
+    (tmp_path / "applied.json").write_text(
+        json.dumps({"login": {"image": str(login_img), "fit": "center"}})
+    )
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    page = _make_page(monitors, _FakeBackend(), image_path=None, config_dir=tmp_path)
+
+    # image_for getter for login resolves to the persisted image.
+    _frame, _ratio, getter = page._previews["login"]
+    assert getter() == str(login_img)
+    # And the card's fit was seeded from the persisted fit.
+    assert page._fits["login"] == "center"
+
+
+def test_privileged_card_override_beats_persisted(tmp_path):
+    persisted = tmp_path / "old.png"
+    Image.new("RGB", (640, 480), (10, 20, 30)).save(persisted)
+    override = tmp_path / "new.png"
+    Image.new("RGB", (640, 480), (200, 100, 50)).save(override)
+    import json
+
+    (tmp_path / "applied.json").write_text(
+        json.dumps({"login": {"image": str(persisted), "fit": "fill"}})
+    )
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    page = _make_page(monitors, _FakeBackend(), image_path=None, config_dir=tmp_path)
+    page.state.set_surface_image("login", str(override))
+    page._rebuild()
+
+    _frame, _ratio, getter = page._previews["login"]
+    assert getter() == str(override)
+
+
+def test_privileged_card_missing_persisted_file_falls_back(tmp_path):
+    import json
+
+    # Persisted path points at a file that no longer exists → placeholder (None).
+    (tmp_path / "applied.json").write_text(
+        json.dumps({"login": {"image": str(tmp_path / "gone.png"), "fit": "fill"}})
+    )
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    page = _make_page(monitors, _FakeBackend(), image_path=None, config_dir=tmp_path)
+
+    _frame, _ratio, getter = page._previews["login"]
+    assert getter() is None
+
+
+def test_privileged_apply_records_on_success(tmp_path):
+    # Simulate the on_success hook screens.py hands run_privileged: recording
+    # persists the image + fit for that surface to applied.json.
+    sample = tmp_path / "s.png"
+    Image.new("RGB", (800, 600), (30, 60, 90)).save(sample)
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    page = _make_page(monitors, _FakeBackend(), image_path=str(sample), config_dir=tmp_path)
+
+    page._on_privileged_applied("splash", str(sample), "fit")
+    assert page.state.applied_image("splash") == str(sample)
+    assert page.state.applied_fit("splash") == "fit"
+    assert (tmp_path / "applied.json").exists()
 
 
 def test_password_dialog_builds():
