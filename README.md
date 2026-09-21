@@ -36,7 +36,15 @@ After installing, launch **LinWallpaper** from your applications menu (or the pa
   centres.
 - **Fit modes** — Fill (zoom + centre-crop), Fit (letterbox), Center, Stretch. The preview and the
   applied result come from the **same** transform, so what you see is what you get.
-- **The Screens page** is the app. It lists every surface as a monitor card:
+- **A Wallpaper library.** The **Wallpaper** page is a tight thumbnail grid of your saved wallpapers.
+  It ships with a **built-in default** (always there, can’t be removed), and you add your own with
+  **Add images…** / **Add folder…**, or by right-clicking in your file manager (see below). From a tile
+  you can **Apply** it to every screen or **Use in Screens** to place it per-surface. Originals are
+  referenced, never copied or modified.
+- **“Add to LinWallpaper” right-click.** Turn on **Settings → Integration** and your file manager gets an
+  **Add to LinWallpaper** entry on images and folders — they land in the Wallpaper library. When you click
+  **Image** on a Screens card, that library appears first (with a **Browse files…** fallback).
+- **The Screens page** lists every surface as a monitor card:
   - a **global bar** at the top: a Fit control, **Open image…** (one image for everything), and
     **Apply to all** (applies to every desktop monitor + the lock screen in one click);
   - **per-card** Fit, **Apply**, and **Open image…** — so each screen can carry a **different** image.
@@ -86,6 +94,19 @@ a spanning **composite** canvas so a single monitor can differ.
 These reproduce the mechanism of `reference/apply-08-screen-wallpaper.sh` (backups, drop-ins only,
 idempotent, `--undo`). **Fedora** (`dracut`, `grub2-mkconfig`) and **Arch** (`mkinitcpio`) are not wired
 yet — the plan for making them universal is in [`docs/design/cross-distro-apply.md`](docs/design/cross-distro-apply.md).
+
+### “Add to LinWallpaper” file-manager menu (no root) — a provider per file manager
+
+| File manager | What it installs (user-level) | Status on this build |
+| --- | --- | --- |
+| **Nemo** (Cinnamon) | a `.nemo_action` in `~/.local/share/nemo/actions/` | ✅ live-tested |
+| **Nautilus** (GNOME) | a script in `~/.local/share/nautilus/scripts/` | 🟡 implemented, untested |
+| **Thunar** (Xfce) | a custom action in `~/.config/Thunar/uca.xml` | 🟡 implemented, untested |
+| **Dolphin** (KDE) | a service menu in `~/.local/share/kio/servicemenus/` | 🟡 implemented, untested |
+
+The active file manager is chosen by evidence (binary on `PATH`, `$XDG_CURRENT_DESKTOP`); every entry calls
+`python3 -m linwallpaper.addcli`. The design is in
+[`docs/design/wallpaper-collections.md`](docs/design/wallpaper-collections.md).
 
 ---
 
@@ -143,7 +164,8 @@ linwallpaper/
 - Working & verified: the GTK 4 app, desktop apply on Cinnamon (read-back confirmed), the Screens page,
   the simulated monitors, the password dialog, and the privileged helper’s dry-run/backups. The live
   privileged apply (login/boot) is **confirmed working** — applied and verified across a reboot.
-- Design & reference: [`docs/design/minimal-gtk4-app.md`](docs/design/minimal-gtk4-app.md) (as-built),
+- Design & reference: [`docs/design/wallpaper-collections.md`](docs/design/wallpaper-collections.md) (the
+  Wallpaper library + “Add to LinWallpaper”), [`docs/design/minimal-gtk4-app.md`](docs/design/minimal-gtk4-app.md) (as-built),
   [`docs/design/cross-distro-apply.md`](docs/design/cross-distro-apply.md) (making the privileged apply
   universal), `docs/STATUS.md` (handoff), `reference/` (the origin shell script).
 

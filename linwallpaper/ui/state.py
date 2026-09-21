@@ -12,6 +12,8 @@ from collections.abc import Callable
 from pathlib import Path
 
 from .. import imaging
+from ..collection import Collection
+from ..config import Settings
 
 # The privileged (root-owned) surfaces whose last-applied image is persisted:
 # the app cannot read these back from the system, so we remember what we wrote.
@@ -44,6 +46,9 @@ class AppState:
         self._config_dir = Path(config_dir) if config_dir else _default_config_dir()
         self._applied_file = self._config_dir / "applied.json"
         self._applied_persisted: dict[str, dict] = self._load_applied()
+        # The wallpaper library and the small settings store (both gi-free).
+        self.collection = Collection()
+        self.settings = Settings(self._config_dir)
 
     def subscribe(self, fn: Callable[[], None]) -> None:
         self._listeners.append(fn)

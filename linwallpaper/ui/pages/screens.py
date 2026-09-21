@@ -25,6 +25,7 @@ from gi.repository import Gtk, Pango
 from ... import imaging
 from ..monitor_frame import MonitorFrame
 from ..password_dialog import run_privileged
+from ..wallpaper_picker import WallpaperPicker
 from .base import BasePage
 
 # The privileged (root-owned) surfaces: (title, owner, helper surface id).
@@ -491,16 +492,19 @@ class ScreensPage(BasePage):
         self._rebuild()
 
     def _on_open_global(self, *_a) -> None:
-        # Set the GLOBAL image and clear every per-surface override so all cards
-        # follow it. ``set_image`` notifies -> refresh() rebuilds every card.
-        self.win.open_image_dialog(on_chosen=self._set_global_image)
+        # Open the wallpaper library picker (Browse files… falls through to the
+        # file dialog). Choosing sets the GLOBAL image and clears per-surface
+        # overrides so all cards follow it.
+        WallpaperPicker(self.win, self.state, self._set_global_image).present()
 
     def _set_global_image(self, path: str) -> None:
         self.state.clear_surface_images()
         self.state.set_image(path)  # notify() -> refresh() rebuilds all cards
 
     def _on_open_surface(self, key: str) -> None:
-        self.win.open_image_dialog(on_chosen=lambda p: self._set_surface_image(key, p))
+        WallpaperPicker(
+            self.win, self.state, lambda p: self._set_surface_image(key, p)
+        ).present()
 
     def _set_surface_image(self, key: str, path: str) -> None:
         # Only this surface changes; re-render just this card (preview + chip).

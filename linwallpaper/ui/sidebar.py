@@ -9,6 +9,7 @@ from gi.repository import Gtk
 # starter convention: (label, route, icon-name)
 NAV_ITEMS = (
     ("Screens", "screens", "video-display-symbolic"),
+    ("Wallpaper", "wallpaper", "image-x-generic-symbolic"),
     ("Settings", "settings", "emblem-system-symbolic"),
 )
 

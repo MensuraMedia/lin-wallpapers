@@ -19,6 +19,11 @@ and kept only for history (see the note at the bottom). Latest commit: `8059381`
 | **Screens page is the whole app** (Wallpaper page removed; opens on Screens; sidebar = Screens / Settings) | ✅ |
 | Every surface as a **uniform, larger** fixed-aspect simulated monitor (primary-monitor aspect, no stretch) | ✅ |
 | Monitors **line up across cards** — the left control column is a fixed width, so wrapping meta text no longer shoves the monitor sideways | ✅ verified (screenshot) |
+| **Wallpaper page** — a tight thumbnail grid library; ships a **built-in default** (always first, non-removable); per-tile **Apply** / **Use in Screens** / **Remove** | ✅ verified (screenshot) |
+| **Add images… / Add folder…** on the Wallpaper page; a folder adds every supported image inside it; originals are referenced, never copied | ✅ verified |
+| **Screens → Image** now opens a **wallpaper picker** (the library as thumbnails) with a **Browse files…** fallback | ✅ verified (screenshot) |
+| **Settings → Integration** toggle installs an **"Add to LinWallpaper"** file-manager right-click action (Nemo live; Nautilus/Thunar/Dolphin providers built) | ✅ Nemo verified; others built |
+| **`python3 -m linwallpaper.addcli <paths>`** — the CLI the context action calls; adds files/folders to the library | ✅ verified |
 | Each card meta: **Supported file types** + **Current resolution** under the screen name | ✅ |
 | Controls in **Image → Fit → Apply** order (per card and the global bar; Image shows the chosen filename) | ✅ |
 | Global bar (**Image** + **Fit** + **Apply to all** → every desktop monitor + lock) | ✅ |
@@ -34,6 +39,8 @@ and kept only for history (see the note at the bottom). Latest commit: `8059381`
 ## 🟡 Built, not verified in that environment
 - Desktop backends **GNOME / MATE** (gsettings base), **Xfce** (xfconf, native per-monitor), **X11 feh** —
   implemented, only Cinnamon is live-tested here.
+- Context-menu providers **Nautilus / Thunar / Dolphin** — implemented to the same interface as Nemo
+  (`linwallpaper/contextmenu/`), only **Nemo** is live-tested here (the dev box is Cinnamon).
 
 ## ⬜ Not built
 - KDE Plasma / wlroots (sway, Hyprland) desktop backends.
@@ -74,6 +81,7 @@ that lesson is baked into how this app was verified.
 
 ## Docs
 - `README.md` — LinWallpaper, features, OS-support tables, install/usage/safety.
+- `docs/design/wallpaper-collections.md` — the Wallpaper library + "Add to LinWallpaper" concept & as-built.
 - `docs/design/minimal-gtk4-app.md` — the concept / as-built design.
 - `docs/design/cross-distro-apply.md` — plan to make the privileged apply universal.
 - `reference/apply-08-screen-wallpaper.sh` — the origin script the privileged helper reproduces.

@@ -29,6 +29,7 @@ FIT_LABELS = {
 }
 
 CACHE_DIR = Path.home() / ".cache" / "linwallpaper"
+THUMB_DIR = CACHE_DIR / "thumbs"
 
 _PAD = (18, 20, 26)  # letterbox / center pad colour (dark, matches surface)
 
@@ -127,6 +128,28 @@ def save_render(
         out_path = CACHE_DIR / f"render-{digest}.png"
     img.save(out_path, "PNG")
     return str(out_path)
+
+
+def thumbnail(path: str | os.PathLike, size: tuple[int, int] = (320, 200), fit: str = FIT_FILL) -> str:
+    """Return a cached PNG thumbnail of ``path`` at ``size`` (rendered once).
+
+    Keyed by path + mtime + size + fit, so a changed file re-renders and a
+    Wallpaper-grid tile shows the *same* crop the apply would produce. Uses the
+    shared ``transform`` (Pillow only — gi-free).
+    """
+    p = Path(path)
+    try:
+        mtime = int(p.stat().st_mtime)
+    except OSError:
+        mtime = 0
+    THUMB_DIR.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha1(f"{p}|{mtime}|{size[0]}x{size[1]}|{fit}".encode()).hexdigest()[:16]
+    out = THUMB_DIR / f"{digest}.png"
+    if out.exists():
+        return str(out)
+    img = transform(path, size, fit)
+    img.save(out, "PNG")
+    return str(out)
 
 
 def supported_formats() -> list[dict]:

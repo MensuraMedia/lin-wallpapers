@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+
 from gi.repository import Adw, Gio, Gtk
 
 from .. import APP_ID, APP_TITLE, imaging
@@ -9,6 +11,7 @@ from ..backends import detect_backend
 from ..monitors import desktop_name, list_monitors
 from .pages.screens import ScreensPage
 from .pages.settings import SettingsPage
+from .pages.wallpaper import WallpaperPage
 from .sidebar import Sidebar
 from .state import AppState
 
@@ -65,13 +68,17 @@ class AppWindow(Adw.ApplicationWindow):
         self.set_content(self.toaster)
 
         # register pages (starter convention)
-        for page_cls in (ScreensPage, SettingsPage):
+        for page_cls in (ScreensPage, WallpaperPage, SettingsPage):
             page = page_cls(self.state, self)
             self.register_page(page.route, page)
 
-        # Screens carries the whole flow now, so the app lands there.
-        self.sidebar.select("screens")
-        self.navigate("screens")
+        # Screens carries the whole flow now, so the app lands there. LINWP_START
+        # can override the initial page (used for screenshots / quick access).
+        start = os.environ.get("LINWP_START", "screens")
+        if start not in self._pages:
+            start = "screens"
+        self.sidebar.select(start)
+        self.navigate(start)
 
     # ---- page registry ----------------------------------------------------
     def register_page(self, route: str, page: Gtk.Widget) -> None:

@@ -181,3 +181,27 @@ window.linwallpaper,
   border-radius: 6px; padding: 1px 7px;
   font-size: 9px; font-weight: 800; letter-spacing: 1px;
 }
+
+/* ---- Wallpaper page: the library grid + picker tiles ------------------- */
+.lw-wp-grid { padding: 2px; }
+.lw-wp-card {
+  background-color: @lw_surface;
+  border: 1px solid @lw_line;
+  border-radius: 12px;
+  padding: 8px;
+}
+.lw-wp-thumb {
+  border-radius: 8px;
+  background-color: @lw_bg;
+  border: 1px solid @lw_line;
+}
+.lw-wp-name {
+  color: @lw_text;
+  font-size: 12px;
+  font-weight: 600;
+}
+.lw-wp-pick {
+  padding: 6px;
+  border-radius: 12px;
+}
+.lw-wp-pick:hover { background-color: @lw_raised; }
