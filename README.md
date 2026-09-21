@@ -142,7 +142,7 @@ linwallpaper/
 
 - Working & verified: the GTK 4 app, desktop apply on Cinnamon (read-back confirmed), the Screens page,
   the simulated monitors, the password dialog, and the privileged helper’s dry-run/backups. The live
-  privileged apply (login/boot) is user-tested with a password.
+  privileged apply (login/boot) is **confirmed working** — applied and verified across a reboot.
 - Design & reference: [`docs/design/minimal-gtk4-app.md`](docs/design/minimal-gtk4-app.md) (as-built),
   [`docs/design/cross-distro-apply.md`](docs/design/cross-distro-apply.md) (making the privileged apply
   universal), `docs/STATUS.md` (handoff), `reference/` (the origin shell script).

@@ -26,12 +26,14 @@ and kept only for history (see the note at the bottom). Latest commit: `8059381`
 | **Password dialog** on privileged surfaces (in-app; sudo here, no polkit agent) | ✅ dialog verified |
 | Privileged helper `--dry-run` (backup-first, drop-ins only, idempotent, refuses without root) | ✅ verified |
 
+## ✅ Now confirmed by the user
+- **Live privileged apply (login / boot splash / boot menu) works.** The user applied the privileged
+  surfaces and **rebooted**: *"everything applied as expected."* This closes the last open verification —
+  the reversible helper (backups, drop-ins, `--undo`) sets the real greeter/splash/GRUB surfaces correctly.
+
 ## 🟡 Built, not verified in that environment
 - Desktop backends **GNOME / MATE** (gsettings base), **Xfce** (xfconf, native per-monitor), **X11 feh** —
   implemented, only Cinnamon is live-tested here.
-- **Privileged apply** for **login / boot splash / boot menu** — implemented (reversible, backups, `--undo`),
-  but the *live* root apply is **user-tested** (no passwordless sudo here; the assistant will not rebuild
-  initramfs/GRUB in a test). Login is the safest to try first; boot splash/menu rebuild initramfs/GRUB.
 
 ## ⬜ Not built
 - KDE Plasma / wlroots (sway, Hyprland) desktop backends.
@@ -57,9 +59,8 @@ and kept only for history (see the note at the bottom). Latest commit: `8059381`
   ones); could be trimmed to a common set — a one-liner in `screens.py::_supported_types_text()` — if wanted.
   It no longer affects layout: the left column is pinned to `_LEFT_COL_WIDTH` (screens.py), so every card wraps
   it identically and all the simulated monitors share the same left edge.
-- The **live privileged apply (login/boot) is still awaiting the user's reboot test.** Recommended order:
-  Login first (instantly reversible), then Boot splash / Boot menu (these rebuild initramfs/GRUB). Revert:
-  `sudo python3 linwallpaper/privileged/lw_privileged.py <login|splash|grub> --undo`.
+- The **live privileged apply (login/boot) is confirmed working** (user applied + rebooted). Revert any
+  surface with: `sudo python3 linwallpaper/privileged/lw_privileged.py <login|splash|grub> --undo`.
 - Offered but not built: an in-app **Undo/Revert** button for the privileged surfaces.
 
 ## Run / verify
