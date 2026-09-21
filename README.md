@@ -7,8 +7,22 @@ simulated monitor, and apply. No daemon, no background process; desktop changes 
 privileged screens ask for your password only when you apply to them.
 
 > Lives in [`linwallpaper/`](linwallpaper/). It is a clean rewrite; the older GTK 3 project under
-> `src/` is superseded and kept only for history. Run it with `python3 -m linwallpaper.main` or
-> `linwallpaper/run.sh`, or from your application menu after `linwallpaper/install.sh`.
+> `src/` is superseded and kept only for history.
+
+## Install
+
+The app installs with one script — [`linwallpaper/install.sh`](linwallpaper/install.sh) — which adds a
+menu entry and panel icon (user-level, no root). It uses your **system** Python and packages; there is
+nothing to build and no virtualenv.
+
+```bash
+# from a checkout
+./linwallpaper/install.sh          # add the menu entry + icon (--uninstall to remove)
+python3 -m linwallpaper.main       # or: ./linwallpaper/run.sh — run without installing
+```
+
+After installing, launch **LinWallpaper** from your applications menu (or the panel icon). See
+[Install & run](#install--run) below for requirements, and [Using it](#using-it) to get started.
 
 ---
 

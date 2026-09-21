@@ -39,6 +39,14 @@ and kept only for history (see the note at the bottom). Latest commit: `8059381`
   `docs/design/cross-distro-apply.md`.
 - An in-app **Undo/Revert** button for the privileged surfaces (currently reverted from a terminal).
 
+## Backlog
+- **[low] On opening the app, the last-applied image is not shown in a surface's simulated monitor.**
+  Reported after a successful apply + reboot (the real surfaces were set correctly — this is preview-only).
+  The monitor preview comes up empty/placeholder instead of the image that was applied. User has deferred
+  this: *"low priority at this time and can be addressed later."* Likely in the render precedence in
+  `screens.py` (`resolved_image` → persisted `applied_image` → placeholder) and/or `applied.json`
+  persistence in `state.py` — verify in the running app, not by tests.
+
 ## Open items / known notes
 - Privileged render size defaults to **1920×1080** (or the primary monitor px) — a non-1080p greeter/boot
   panel would letterbox/crop (cosmetic).
