@@ -12,7 +12,7 @@ class BasePage(Gtk.Box):
     subtitle = ""
 
     def __init__(self, state, win) -> None:
-        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=16)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10)
         self.add_css_class("lw-main")
         self.state = state
         self.win = win

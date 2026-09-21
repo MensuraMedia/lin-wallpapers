@@ -67,18 +67,12 @@ class ScreensPage(BasePage):
         outer.append(self.flow)
         return outer
 
-    # ---- global control bar (fit-for-all / open-for-all / apply-to-all) ----
+    # ---- global control bar (image-for-all / fit-for-all / apply-to-all) ----
     def _build_control_bar(self) -> Gtk.Widget:
         bar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
         bar.add_css_class("lw-toolbar")
 
-        fit_lbl = Gtk.Label(label="FIT")
-        fit_lbl.add_css_class("lw-label")
-        fit_lbl.set_valign(Gtk.Align.CENTER)
-        bar.append(fit_lbl)
-        bar.append(self._build_global_fit())
-
-        open_btn = Gtk.Button(label="+  Open image…")
+        open_btn = Gtk.Button(label="Image")
         open_btn.add_css_class("lw-ghost")
         open_btn.set_valign(Gtk.Align.CENTER)
         open_btn.connect("clicked", self._on_open_global)
@@ -90,6 +84,12 @@ class ScreensPage(BasePage):
         self._global_chip.set_ellipsize(Pango.EllipsizeMode.END)
         self._global_chip.set_max_width_chars(24)
         bar.append(self._global_chip)
+
+        fit_lbl = Gtk.Label(label="FIT")
+        fit_lbl.add_css_class("lw-label")
+        fit_lbl.set_valign(Gtk.Align.CENTER)
+        bar.append(fit_lbl)
+        bar.append(self._build_global_fit())
 
         spacer = Gtk.Box()
         spacer.set_hexpand(True)
@@ -122,6 +122,29 @@ class ScreensPage(BasePage):
 
     def _global_chip_text(self) -> str:
         return Path(self.state.image_path).name if self.state.image_path else "No image"
+
+    def _supported_types_text(self) -> str:
+        """A concise, comma-separated list of loadable formats (uppercased names)."""
+        cached = getattr(self, "_types_text", None)
+        if cached is not None:
+            return cached
+        try:
+            names = [f["name"].upper() for f in imaging.supported_formats()]
+        except Exception:
+            names = []
+        # De-duplicate while preserving loader order.
+        seen: dict[str, None] = {}
+        for n in names:
+            seen.setdefault(n, None)
+        joined = ", ".join(seen.keys()) if seen else "—"
+        self._types_text = f"Supported file types: {joined}"
+        return self._types_text
+
+    def _primary_resolution(self) -> str:
+        mon = self._primary_monitor()
+        if mon:
+            return f"{mon.px_width} × {mon.px_height}"
+        return "1920 × 1080"
 
     # ---- build ------------------------------------------------------------
     def _rebuild(self) -> None:
@@ -156,11 +179,12 @@ class ScreensPage(BasePage):
             badges.append(("● APPLIED", "lw-badge-good"))
 
         can_apply = bool(self.state.resolved_image(key) and self.state.backend)
-        meta = f"Desktop · {mon.px_width} × {mon.px_height} · scale {mon.scale}×"
+        meta = f"Desktop · scale {mon.scale}×"
         return self._surface_card(
             key=key,
             title=f"Desktop — {mon.name}",
             meta=meta,
+            resolution=f"{mon.px_width} × {mon.px_height}",
             ratio=ratio,
             image_getter=image_for,
             badges=badges,
@@ -180,6 +204,7 @@ class ScreensPage(BasePage):
             key="lock",
             title="Lock screen",
             meta="Mirrors the primary desktop on Cinnamon",
+            resolution=self._primary_resolution(),
             ratio=ratio,
             image_getter=image_for,
             badges=[],
@@ -200,6 +225,7 @@ class ScreensPage(BasePage):
             key=surface_id,
             title=title,
             meta=owner,
+            resolution=self._primary_resolution(),
             ratio=ratio,
             image_getter=image_for,
             badges=[],
@@ -216,6 +242,7 @@ class ScreensPage(BasePage):
         key: str,
         title: str,
         meta: str,
+        resolution: str,
         ratio: float,
         image_getter,
         badges,
@@ -254,6 +281,37 @@ class ScreensPage(BasePage):
         sub.set_wrap(True)
         left.append(sub)
 
+        # Two dim facts under the name: what can be loaded, and the real pixel size
+        # of the physical screen this surface displays on.
+        types_lbl = Gtk.Label(label=self._supported_types_text(), xalign=0.0)
+        types_lbl.add_css_class("lw-sub")
+        types_lbl.set_wrap(True)
+        left.append(types_lbl)
+
+        res_lbl = Gtk.Label(label=f"Current resolution: {resolution}", xalign=0.0)
+        res_lbl.add_css_class("lw-sub")
+        res_lbl.set_wrap(True)
+        left.append(res_lbl)
+
+        # 1) Image — browse for a file for THIS surface, with the chosen file name
+        # shown right under it. Each screen can carry a different image.
+        image_group = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+        image_group.set_halign(Gtk.Align.START)
+        open_btn = Gtk.Button(label="Image")
+        open_btn.add_css_class("lw-ghost")
+        open_btn.set_halign(Gtk.Align.START)
+        open_btn.connect("clicked", lambda *_: self._on_open_surface(key))
+        image_group.append(open_btn)
+
+        img_chip = Gtk.Label(label=self._card_chip_text(key), xalign=0.0)
+        img_chip.add_css_class("lw-chip")
+        img_chip.set_halign(Gtk.Align.START)
+        img_chip.set_ellipsize(Pango.EllipsizeMode.END)
+        img_chip.set_max_width_chars(22)
+        image_group.append(img_chip)
+        left.append(image_group)
+
+        # 2) Fit segmented control.
         fit_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
         fit_lbl = Gtk.Label(label="FIT")
         fit_lbl.add_css_class("lw-label")
@@ -262,43 +320,22 @@ class ScreensPage(BasePage):
         fit_row.append(self._fit_control(key))
         left.append(fit_row)
 
-        spacer = Gtk.Box()
-        spacer.set_vexpand(True)
-        left.append(spacer)
-
-        # Apply button + optional "requires password" caption.
+        # 3) Apply button + optional "requires password" caption.
         apply_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-        apply_area.set_halign(Gtk.Align.END)
+        apply_area.set_halign(Gtk.Align.START)
         apply_btn = Gtk.Button(label="Apply")
         apply_btn.add_css_class("lw-primary")
+        apply_btn.set_halign(Gtk.Align.START)
         apply_btn.set_sensitive(can_apply)
         if not can_apply and disabled_reason:
             apply_btn.set_tooltip_text(disabled_reason)
         apply_btn.connect("clicked", lambda *_: apply_cb())
         apply_area.append(apply_btn)
         if requires_password:
-            caption = Gtk.Label(label="requires password", xalign=1.0)
+            caption = Gtk.Label(label="requires password", xalign=0.0)
             caption.add_css_class("lw-caption")
             apply_area.append(caption)
         left.append(apply_area)
-
-        # Per-surface "Open image…" — gives THIS surface its own image, under the
-        # Fit control and Apply button. Each screen can therefore carry a different
-        # image; a small chip shows which image the card is currently using.
-        open_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        open_row.set_halign(Gtk.Align.END)
-        open_btn = Gtk.Button(label="+  Open image…")
-        open_btn.add_css_class("lw-ghost")
-        open_btn.connect("clicked", lambda *_: self._on_open_surface(key))
-        open_row.append(open_btn)
-        left.append(open_row)
-
-        img_chip = Gtk.Label(label=self._card_chip_text(key), xalign=1.0)
-        img_chip.add_css_class("lw-chip")
-        img_chip.set_halign(Gtk.Align.END)
-        img_chip.set_ellipsize(Pango.EllipsizeMode.END)
-        img_chip.set_max_width_chars(22)
-        left.append(img_chip)
 
         self._card_ui[key] = {
             "apply_btn": apply_btn,

@@ -52,7 +52,7 @@ window.linwallpaper,
 .lw-foot-body { font-size: 11px; color: @lw_dim; }
 
 /* ---- content ---- */
-.lw-main { padding: 26px 30px; }
+.lw-main { padding: 12px 30px 26px 30px; }
 .lw-h1 { font-size: 23px; font-weight: 800; }
 .lw-sub { font-size: 12px; color: @lw_dim; }
 

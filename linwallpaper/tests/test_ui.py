@@ -191,6 +191,45 @@ def test_screens_every_card_has_apply(tmp_path):
     assert len(captions) == 3
 
 
+def test_screens_image_buttons_are_renamed(tmp_path):
+    sample = tmp_path / "s.png"
+    Image.new("RGB", (800, 600), (30, 60, 90)).save(sample)
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    page = _make_page(monitors, _FakeBackend(), image_path=str(sample))
+
+    # The per-card + global browse buttons are all labelled just "Image" now.
+    image_btns = [
+        w for w in _walk(page) if isinstance(w, Gtk.Button) and w.get_label() == "Image"
+    ]
+    # 1 desktop + lock + 3 privileged = 5 cards, plus the global top bar = 6.
+    assert len(image_btns) == 6
+    # The old label is gone entirely.
+    assert not [
+        w
+        for w in _walk(page)
+        if isinstance(w, Gtk.Button) and w.get_label() == "+  Open image…"
+    ]
+
+
+def test_screens_cards_show_supported_types_and_resolution(tmp_path):
+    sample = tmp_path / "s.png"
+    Image.new("RGB", (800, 600), (30, 60, 90)).save(sample)
+    monitors = [
+        MonitorInfo("DP-1", 2560, 1440, 1, 0, 0, True),
+        MonitorInfo("HDMI-1", 1920, 1080, 1, 2560, 0, False),
+    ]
+    page = _make_page(monitors, _FakeBackend(), image_path=str(sample))
+    labels = _labels(page)
+
+    # Every card carries the "Supported file types: …" meta line.
+    assert any(t.startswith("Supported file types:") for t in labels)
+    # Desktop cards show their OWN monitor resolution.
+    assert "Current resolution: 2560 × 1440" in labels
+    assert "Current resolution: 1920 × 1080" in labels
+    # Lock/login/boot show the PRIMARY monitor resolution (2560 × 1440 here).
+    assert sum(1 for t in labels if t == "Current resolution: 2560 × 1440") >= 2
+
+
 def test_screens_apply_disabled_without_image():
     monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
     page = _make_page(monitors, _FakeBackend(), image_path=None)
