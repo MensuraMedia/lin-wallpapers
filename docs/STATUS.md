@@ -1,8 +1,8 @@
 # Status & Handoff — LinWallpaper
 
-_Last updated: 2026-09-20 (evening). The active deliverable is **LinWallpaper** (`linwallpaper/`), a small
+_Last updated: 2026-09-20 (late). The active deliverable is **LinWallpaper** (`linwallpaper/`), a small
 GTK 4 + libadwaita desktop-wallpaper app. The earlier GTK 3 milestone project under `src/` is **superseded**
-and kept only for history (see the note at the bottom). Latest commit: `029f5ea`._
+and kept only for history (see the note at the bottom). Latest commit: `8059381`._
 
 ## How to read status
 ✅ working & verified · 🟡 built, not live-verified in that environment · ⬜ not built.
@@ -18,6 +18,7 @@ and kept only for history (see the note at the bottom). Latest commit: `029f5ea`
 | **Desktop apply** (Cinnamon `gsettings`), per fit → `picture-options`, **Undo** | ✅ read-back verified |
 | **Screens page is the whole app** (Wallpaper page removed; opens on Screens; sidebar = Screens / Settings) | ✅ |
 | Every surface as a **uniform, larger** fixed-aspect simulated monitor (primary-monitor aspect, no stretch) | ✅ |
+| Monitors **line up across cards** — the left control column is a fixed width, so wrapping meta text no longer shoves the monitor sideways | ✅ verified (screenshot) |
 | Each card meta: **Supported file types** + **Current resolution** under the screen name | ✅ |
 | Controls in **Image → Fit → Apply** order (per card and the global bar; Image shows the chosen filename) | ✅ |
 | Global bar (**Image** + **Fit** + **Apply to all** → every desktop monitor + lock) | ✅ |
@@ -46,6 +47,8 @@ and kept only for history (see the note at the bottom). Latest commit: `029f5ea`
 - Benign `Gtk-WARNING … min height -1` from the aspect-pinned monitor layout — a warning, not a crash.
 - The **Supported file types** line lists every installed pixbuf loader (wraps two lines, includes uncommon
   ones); could be trimmed to a common set — a one-liner in `screens.py::_supported_types_text()` — if wanted.
+  It no longer affects layout: the left column is pinned to `_LEFT_COL_WIDTH` (screens.py), so every card wraps
+  it identically and all the simulated monitors share the same left edge.
 - The **live privileged apply (login/boot) is still awaiting the user's reboot test.** Recommended order:
   Login first (instantly reversible), then Boot splash / Boot menu (these rebuild initramfs/GRUB). Revert:
   `sudo python3 linwallpaper/privileged/lw_privileged.py <login|splash|grub> --undo`.
