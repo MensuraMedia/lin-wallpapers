@@ -20,6 +20,7 @@ class AppState:
         self.fit: str = imaging.FIT_FILL
         self.target: str = "all"  # "all" or a connector name
         self.per_screen: dict[str, str] = {}  # connector -> image path
+        self.applied: dict[str, str] = {}  # target ("all"/connector) -> applied image path
         self.last_apply = None  # ApplyResult, for Undo
         self._listeners: list[Callable[[], None]] = []
 

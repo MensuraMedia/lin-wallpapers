@@ -114,3 +114,56 @@ window.linwallpaper,
 }
 .lw-mono { font-family: monospace; }
 .dim { color: @lw_dim; }
+
+/* ---- simulated monitor (MonitorFrame) ---- */
+.lw-monitor-bezel {
+  background-color: @lw_bg;
+  border: 2px solid @lw_line;
+  border-radius: 12px;
+  padding: 8px;
+}
+.lw-monitor-screen {
+  background-color: @lw_raised;
+  border-radius: 5px;
+}
+.lw-monitor-placeholder {
+  background-color: @lw_raised;
+  border-radius: 5px;
+}
+.lw-monitor-placeholder-text {
+  color: @lw_dim;
+  font-size: 12px;
+  font-weight: 600;
+}
+.lw-monitor-stand {
+  background-color: @lw_line;
+  border-radius: 0 0 4px 4px;
+  margin-top: -1px;
+}
+.lw-monitor-base {
+  background-color: @lw_line;
+  border-radius: 6px;
+  margin-top: 2px;
+}
+
+/* ---- surface reason chips ---- */
+.lw-reason {
+  border-radius: 8px;
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.lw-reason.ok {
+  background-color: alpha(@lw_accent, 0.14);
+  color: @lw_accent2;
+}
+.lw-reason.warn {
+  background-color: alpha(@lw_dim, 0.14);
+  color: @lw_dim;
+}
+.lw-badge-good {
+  background-color: alpha(@lw_good, 0.20);
+  color: @lw_good;
+  border-radius: 6px; padding: 1px 7px;
+  font-size: 9px; font-weight: 800; letter-spacing: 1px;
+}

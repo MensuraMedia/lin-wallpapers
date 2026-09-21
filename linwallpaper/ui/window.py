@@ -7,7 +7,6 @@ from gi.repository import Adw, Gio, Gtk
 from .. import APP_ID, APP_TITLE, imaging
 from ..backends import detect_backend
 from ..monitors import desktop_name, list_monitors
-from .pages.preview import PreviewPage
 from .pages.screens import ScreensPage
 from .pages.settings import SettingsPage
 from .pages.wallpaper import WallpaperPage
@@ -67,7 +66,7 @@ class AppWindow(Adw.ApplicationWindow):
         self.set_content(self.toaster)
 
         # register pages (starter convention)
-        for page_cls in (WallpaperPage, ScreensPage, PreviewPage, SettingsPage):
+        for page_cls in (WallpaperPage, ScreensPage, SettingsPage):
             page = page_cls(self.state, self)
             self.register_page(page.route, page)
 
@@ -148,6 +147,7 @@ class AppWindow(Adw.ApplicationWindow):
             self.toast(f"Apply failed: {exc}")
             return
         self.state.last_apply = result
+        self.state.applied[result.target] = result.image
         where = "all screens" if result.target == "all" else result.target
         toast = Adw.Toast.new(f"Applied to {where}")
         toast.set_button_label("Undo")

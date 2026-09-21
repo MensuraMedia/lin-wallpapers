@@ -10,7 +10,6 @@ from gi.repository import Gtk
 NAV_ITEMS = (
     ("Wallpaper", "wallpaper", "image-x-generic-symbolic"),
     ("Screens", "screens", "video-display-symbolic"),
-    ("Preview", "preview", "view-reveal-symbolic"),
     ("Settings", "settings", "emblem-system-symbolic"),
 )
 
