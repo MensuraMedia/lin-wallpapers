@@ -42,6 +42,10 @@ class ScreensPage(BasePage):
     title = "Screens"
     subtitle = "Every surface a wallpaper can live on — pick a fit, preview it, apply it."
 
+    # Fixed width for each card's left control column, so every simulated monitor
+    # (to its right) lines up across cards regardless of how the meta text wraps.
+    _LEFT_COL_WIDTH = 430
+
     def build_content(self) -> Gtk.Widget:
         # Per-surface fit state, keyed by surface key (connector / lock / login…).
         self._fits: dict[str, str] = getattr(self, "_fits", {})
@@ -267,7 +271,8 @@ class ScreensPage(BasePage):
     ) -> Gtk.Widget:
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         card.add_css_class("lw-screen-card")
-        card.set_size_request(460, -1)
+        # Room for the fixed left column (+ margins) and the monitor beside it.
+        card.set_size_request(self._LEFT_COL_WIDTH + 300, -1)
 
         body = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         body.set_margin_top(16)
@@ -275,9 +280,14 @@ class ScreensPage(BasePage):
         body.set_margin_start(16)
         body.set_margin_end(16)
 
-        # LEFT: control column.
+        # LEFT: control column. Pin it to a fixed width so the monitor on the
+        # right starts at the same x on every card. If the column is left to size
+        # to its content, the "Supported file types" line wraps to a different
+        # number of lines per surface (2 on Lock, 3 on Login/Boot), which changes
+        # the column's width and visibly shoves the simulated monitor sideways.
         left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
-        left.set_hexpand(True)
+        left.set_hexpand(False)
+        left.set_size_request(self._LEFT_COL_WIDTH, -1)
 
         head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         name = Gtk.Label(label=title, xalign=0.0)
@@ -359,9 +369,13 @@ class ScreensPage(BasePage):
 
         body.append(left)
 
-        # RIGHT: simulated monitor with the live preview.
+        # RIGHT: simulated monitor with the live preview. It absorbs the row's
+        # slack and centres within it, so with a fixed-width left column every
+        # card's monitor lands at the same position.
         frame = MonitorFrame(ratio=ratio)
         frame.set_valign(Gtk.Align.CENTER)
+        frame.set_hexpand(True)
+        frame.set_halign(Gtk.Align.CENTER)
         body.append(frame)
 
         self._previews[key] = (frame, ratio, image_getter)
