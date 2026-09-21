@@ -40,11 +40,11 @@ def _labels(widget) -> list[str]:
     return [w.get_text() for w in _walk(widget) if isinstance(w, Gtk.Label)]
 
 
-def _set_here_buttons(widget):
+def _apply_buttons(widget):
     return [
         w
         for w in _walk(widget)
-        if isinstance(w, Gtk.Button) and w.get_label() == "Set here"
+        if isinstance(w, Gtk.Button) and w.get_label() == "Apply"
     ]
 
 
@@ -125,21 +125,64 @@ def test_screens_lists_all_surfaces(tmp_path):
     assert n_cards == 6
 
 
-def test_screens_desktop_live_privileged_disabled(tmp_path):
+def test_screens_every_card_has_apply(tmp_path):
     sample = tmp_path / "s.png"
     Image.new("RGB", (800, 600), (30, 60, 90)).save(sample)
     monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
     page = _make_page(monitors, _FakeBackend(), image_path=str(sample))
 
-    buttons = _set_here_buttons(page)
-    sensitive = [b.get_sensitive() for b in buttons]
-    # Exactly one live "Set here" (the desktop card); the 3 privileged are disabled.
-    assert sensitive.count(True) == 1
-    assert sensitive.count(False) == 3
+    # desktop + lock + 3 privileged = 5 Apply buttons; all enabled (image set).
+    buttons = _apply_buttons(page)
+    assert len(buttons) == 5
+    assert all(b.get_sensitive() for b in buttons)
 
-    reasons = [
-        w.get_text()
+    # The 3 root surfaces carry a "requires password" caption; desktop/lock do not.
+    captions = [
+        w
         for w in _walk(page)
-        if isinstance(w, Gtk.Label) and "privileged apply engine" in w.get_text()
+        if isinstance(w, Gtk.Label) and w.get_text() == "requires password"
     ]
-    assert len(reasons) == 3  # login + boot splash + boot menu
+    assert len(captions) == 3
+
+
+def test_screens_apply_disabled_without_image():
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    page = _make_page(monitors, _FakeBackend(), image_path=None)
+    # No image chosen: every Apply is disabled (nothing to render/apply).
+    buttons = _apply_buttons(page)
+    assert buttons
+    assert all(not b.get_sensitive() for b in buttons)
+
+
+def test_screens_fit_control_updates_surface_state(tmp_path):
+    sample = tmp_path / "s.png"
+    Image.new("RGB", (800, 600), (30, 60, 90)).save(sample)
+    monitors = [MonitorInfo("DP-1", 1920, 1080, 1, 0, 0, True)]
+    page = _make_page(monitors, _FakeBackend(), image_path=str(sample))
+
+    # Each surface tracks its own fit; toggling "Center" on the login card sets it.
+    center = [
+        w
+        for w in _walk(page)
+        if isinstance(w, Gtk.ToggleButton) and w.get_label() == "Center"
+    ]
+    assert center  # one per card
+    center[0].set_active(True)
+    assert "center" in page._fits.values()
+
+
+def test_password_dialog_builds():
+    from linwallpaper.ui.password_dialog import PasswordDialog, detect_auth_method
+
+    method = detect_auth_method()
+    assert method in ("sudo", "pkexec")
+    captured = {}
+    dlg = PasswordDialog(
+        None, surface="login", method="sudo", on_submit=lambda pw: captured.setdefault("pw", pw)
+    )
+    # The masked entry must be a PasswordEntry (never a plain Entry).
+    entries = [w for w in _walk(dlg) if isinstance(w, Gtk.PasswordEntry)]
+    assert len(entries) == 1
+    # Cancel + Apply buttons present.
+    labels = {w.get_label() for w in _walk(dlg) if isinstance(w, Gtk.Button)}
+    assert {"Cancel", "Apply"}.issubset(labels)

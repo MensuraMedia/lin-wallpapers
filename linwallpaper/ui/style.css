@@ -161,6 +161,12 @@ window.linwallpaper,
   background-color: alpha(@lw_dim, 0.14);
   color: @lw_dim;
 }
+.lw-caption {
+  color: @lw_dim;
+  font-size: 10px;
+  font-weight: 600;
+  font-style: italic;
+}
 .lw-badge-good {
   background-color: alpha(@lw_good, 0.20);
   color: @lw_good;

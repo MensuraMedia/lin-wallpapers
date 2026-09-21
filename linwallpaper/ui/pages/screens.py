@@ -1,44 +1,56 @@
-"""Screens page — an honest card per SURFACE, each with a simulated monitor.
+"""Screens page — one card per SURFACE with per-surface Fit + live preview + Apply.
+
+Each surface card is two columns:
+  * LEFT  — a control column: a Fit segmented control (Fill/Fit/Center/Stretch,
+            per-surface state) and, at the bottom, an **Apply** button. For the
+            root-owned surfaces a small "requires password" caption sits under it.
+  * RIGHT — the simulated :class:`MonitorFrame`, showing the *selected image*
+            (``state.image_path``) rendered at that surface's chosen fit. Changing
+            the fit updates the sim monitor live. It never distorts (AspectFrame).
 
 Surfaces (the concept's five, §4):
-  * Desktop      — one card per physical monitor, live and correct.
-  * Lock screen  — mirrors the primary desktop ("Follows the desktop" on Cinnamon).
-  * Login screen — placeholder + reason; needs the privileged apply engine.
-  * Boot splash  — placeholder + reason; needs the privileged apply engine.
-  * Boot menu    — placeholder + reason; needs the privileged apply engine.
-
-The cards may stretch with the window; the :class:`MonitorFrame` inside each never
-distorts its image (that is the whole point).
+  * Desktop      — one card per physical monitor; Apply uses the desktop backend.
+  * Lock screen  — mirrors the primary desktop; Apply uses the desktop backend.
+  * Login screen — LightDM greeter; Apply needs root → password dialog.
+  * Boot splash  — Plymouth theme; Apply needs root → password dialog.
+  * Boot menu    — GRUB background; Apply needs root → password dialog.
 """
 
 from __future__ import annotations
+
+from pathlib import Path
 
 from gi.repository import Gtk
 
 from ... import imaging
 from ..monitor_frame import MonitorFrame
+from ..password_dialog import run_privileged
 from .base import BasePage
 
-# The single reason shown on every surface the privileged engine owns.
-_PRIV_REASON = "Not set by LinWallpaper — needs the privileged apply engine"
-
-# The privileged (root-owned) surfaces, in concept order.
+# The privileged (root-owned) surfaces: (title, owner, helper surface id).
 _PRIVILEGED = (
-    ("Login screen", "LightDM / greeter background"),
-    ("Boot splash", "Plymouth theme"),
-    ("Boot menu", "GRUB background"),
+    ("Login screen", "LightDM / slick-greeter background", "login"),
+    ("Boot splash", "Plymouth boot theme", "splash"),
+    ("Boot menu", "GRUB menu background", "grub"),
 )
+
+_NO_IMAGE_HINT = "Open an image on the Wallpaper page first"
 
 
 class ScreensPage(BasePage):
     route = "screens"
     title = "Screens"
-    subtitle = "Every surface a wallpaper can live on, and what it shows right now."
+    subtitle = "Every surface a wallpaper can live on — pick a fit, preview it, apply it."
 
     def build_content(self) -> Gtk.Widget:
+        # Per-surface fit state, keyed by surface key (connector / lock / login…).
+        self._fits: dict[str, str] = getattr(self, "_fits", {})
+        # key -> (frame, ratio, image-path-getter) for live re-render on fit change.
+        self._previews: dict[str, tuple] = {}
+
         self.flow = Gtk.FlowBox()
         self.flow.set_valign(Gtk.Align.START)
-        self.flow.set_max_children_per_line(3)
+        self.flow.set_max_children_per_line(2)
         self.flow.set_min_children_per_line(1)
         self.flow.set_column_spacing(18)
         self.flow.set_row_spacing(18)
@@ -49,6 +61,7 @@ class ScreensPage(BasePage):
 
     # ---- build ------------------------------------------------------------
     def _rebuild(self) -> None:
+        self._previews = {}
         child = self.flow.get_first_child()
         while child:
             self.flow.remove(child)
@@ -56,28 +69,20 @@ class ScreensPage(BasePage):
 
         current = self._current_desktop_path()
 
-        # Desktop: one card per physical monitor (live).
         for mon in self.state.monitors:
             self.flow.append(self._desktop_card(mon, current))
-
-        # Lock screen: mirrors the primary desktop image.
         self.flow.append(self._lock_card(current))
+        for name, owner, surface_id in _PRIVILEGED:
+            self.flow.append(self._privileged_card(name, owner, surface_id))
 
-        # Login / boot surfaces: placeholder + reason, disabled action.
-        for name, owner in _PRIVILEGED:
-            self.flow.append(self._privileged_card(name, owner))
-
-    def _desktop_card(self, mon, current: str | None) -> Gtk.Widget:
+    # ---- desktop + lock (no password) -------------------------------------
+    def _desktop_card(self, mon, current: str | None):
+        key = mon.name
         ratio = self._aspect(mon)
         applied = self._is_applied(mon.name)
 
-        frame = MonitorFrame(ratio=ratio)
-        if applied and self.state.image_path:
-            self._render(frame, self.state.image_path, ratio)
-        elif current:
-            self._render(frame, current, ratio)
-        else:
-            frame.set_placeholder("No wallpaper set")
+        def image_for() -> str | None:
+            return self.state.image_path or current
 
         badges = []
         if mon.primary:
@@ -85,69 +90,90 @@ class ScreensPage(BasePage):
         if applied:
             badges.append(("● APPLIED", "lw-badge-good"))
 
-        set_btn = Gtk.Button(label="Set here")
-        set_btn.add_css_class("lw-ghost")
-        can_set = bool(self.state.image_path and self.state.backend)
-        set_btn.set_sensitive(can_set)
-        if not can_set:
-            set_btn.set_tooltip_text("Open an image on the Wallpaper page first")
-        set_btn.connect("clicked", self._on_set_here, mon.name)
-
+        can_apply = bool(self.state.image_path and self.state.backend)
         meta = f"Desktop · {mon.px_width} × {mon.px_height} · scale {mon.scale}×"
-        return self._card(f"Desktop — {mon.name}", meta, frame, badges, set_btn)
-
-    def _lock_card(self, current: str | None) -> Gtk.Widget:
-        primary = self._primary_monitor()
-        ratio = self._aspect(primary) if primary else 16 / 9
-        frame = MonitorFrame(ratio=ratio)
-        if current:
-            self._render(frame, current, ratio)
-        else:
-            frame.set_placeholder("No wallpaper set")
-
-        chip = self._reason_chip("Follows the desktop", ok=True)
-        return self._card(
-            "Lock screen",
-            "Mirrors the primary desktop on Cinnamon",
-            frame,
-            badges=[],
-            action=None,
-            footer=chip,
+        return self._surface_card(
+            key=key,
+            title=f"Desktop — {mon.name}",
+            meta=meta,
+            ratio=ratio,
+            image_getter=image_for,
+            badges=badges,
+            can_apply=can_apply,
+            apply_cb=lambda: self._apply_desktop(mon.name, mon.name),
+            disabled_reason=None if can_apply else _NO_IMAGE_HINT,
         )
 
-    def _privileged_card(self, name: str, owner: str) -> Gtk.Widget:
+    def _lock_card(self, current: str | None):
         primary = self._primary_monitor()
         ratio = self._aspect(primary) if primary else 16 / 9
-        frame = MonitorFrame(ratio=ratio)
-        frame.set_placeholder("Not shown\n(no preview yet)")
 
-        set_btn = Gtk.Button(label="Set here")
-        set_btn.add_css_class("lw-ghost")
-        set_btn.set_sensitive(False)
-        set_btn.set_tooltip_text(_PRIV_REASON)
+        def image_for() -> str | None:
+            return self.state.image_path or current
 
-        chip = self._reason_chip(_PRIV_REASON, ok=False)
-        return self._card(name, owner, frame, badges=[], action=set_btn, footer=chip)
+        can_apply = bool(self.state.image_path and self.state.backend)
+        return self._surface_card(
+            key="lock",
+            title="Lock screen",
+            meta="Mirrors the primary desktop on Cinnamon",
+            ratio=ratio,
+            image_getter=image_for,
+            badges=[],
+            can_apply=can_apply,
+            apply_cb=lambda: self._apply_desktop("lock", "all"),
+            disabled_reason=None if can_apply else _NO_IMAGE_HINT,
+        )
+
+    # ---- privileged (root → password dialog) ------------------------------
+    def _privileged_card(self, title: str, owner: str, surface_id: str):
+        primary = self._primary_monitor()
+        ratio = self._aspect(primary) if primary else 16 / 9
+
+        def image_for() -> str | None:
+            return self.state.image_path
+
+        can_apply = bool(self.state.image_path)
+        return self._surface_card(
+            key=surface_id,
+            title=title,
+            meta=owner,
+            ratio=ratio,
+            image_getter=image_for,
+            badges=[],
+            can_apply=can_apply,
+            apply_cb=lambda: self._apply_privileged(surface_id),
+            disabled_reason=None if can_apply else _NO_IMAGE_HINT,
+            requires_password=True,
+        )
 
     # ---- card scaffold ----------------------------------------------------
-    def _card(
+    def _surface_card(
         self,
+        *,
+        key: str,
         title: str,
         meta: str,
-        frame: Gtk.Widget,
+        ratio: float,
+        image_getter,
         badges,
-        action,
-        footer: Gtk.Widget | None = None,
+        can_apply: bool,
+        apply_cb,
+        disabled_reason: str | None,
+        requires_password: bool = False,
     ) -> Gtk.Widget:
         card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
         card.add_css_class("lw-screen-card")
-        card.set_size_request(340, -1)
+        card.set_size_request(460, -1)
 
-        body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12)
+        body = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
         body.set_margin_top(16)
         body.set_margin_bottom(16)
         body.set_margin_start(16)
         body.set_margin_end(16)
+
+        # LEFT: control column.
+        left = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=10)
+        left.set_hexpand(True)
 
         head = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
         name = Gtk.Label(label=title, xalign=0.0)
@@ -158,35 +184,89 @@ class ScreensPage(BasePage):
             b.add_css_class(css)
             b.set_valign(Gtk.Align.CENTER)
             head.append(b)
-        body.append(head)
+        left.append(head)
 
         sub = Gtk.Label(label=meta, xalign=0.0)
         sub.add_css_class("lw-sub")
         sub.set_wrap(True)
-        body.append(sub)
+        left.append(sub)
 
+        fit_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
+        fit_lbl = Gtk.Label(label="FIT")
+        fit_lbl.add_css_class("lw-label")
+        fit_lbl.set_valign(Gtk.Align.CENTER)
+        fit_row.append(fit_lbl)
+        fit_row.append(self._fit_control(key))
+        left.append(fit_row)
+
+        spacer = Gtk.Box()
+        spacer.set_vexpand(True)
+        left.append(spacer)
+
+        # Apply button + optional "requires password" caption.
+        apply_area = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
+        apply_area.set_halign(Gtk.Align.END)
+        apply_btn = Gtk.Button(label="Apply")
+        apply_btn.add_css_class("lw-primary")
+        apply_btn.set_sensitive(can_apply)
+        if not can_apply and disabled_reason:
+            apply_btn.set_tooltip_text(disabled_reason)
+        apply_btn.connect("clicked", lambda *_: apply_cb())
+        apply_area.append(apply_btn)
+        if requires_password:
+            caption = Gtk.Label(label="requires password", xalign=1.0)
+            caption.add_css_class("lw-caption")
+            apply_area.append(caption)
+        left.append(apply_area)
+
+        body.append(left)
+
+        # RIGHT: simulated monitor with the live preview.
+        frame = MonitorFrame(ratio=ratio)
+        frame.set_valign(Gtk.Align.CENTER)
         body.append(frame)
 
-        if footer is not None:
-            body.append(footer)
-
-        if action is not None:
-            row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
-            spacer = Gtk.Box()
-            spacer.set_hexpand(True)
-            row.append(spacer)
-            row.append(action)
-            body.append(row)
+        self._previews[key] = (frame, ratio, image_getter)
+        self._render_preview(key)
 
         card.append(body)
         return card
 
-    def _reason_chip(self, text: str, ok: bool) -> Gtk.Widget:
-        chip = Gtk.Label(label=text, xalign=0.0)
-        chip.add_css_class("lw-reason")
-        chip.add_css_class("ok" if ok else "warn")
-        chip.set_wrap(True)
-        return chip
+    def _fit_control(self, key: str) -> Gtk.Widget:
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=0)
+        box.add_css_class("lw-seg")
+        active = self._fits.get(key, imaging.FIT_FILL)
+        first = None
+        for fit in imaging.FITS:
+            btn = Gtk.ToggleButton(label=imaging.FIT_LABELS[fit])
+            btn.set_has_frame(False)
+            if first is None:
+                first = btn
+            else:
+                btn.set_group(first)
+            btn.set_active(fit == active)
+            btn.connect("toggled", self._on_fit, key, fit)
+            box.append(btn)
+        return box
+
+    # ---- live preview -----------------------------------------------------
+    def _render_preview(self, key: str) -> None:
+        entry = self._previews.get(key)
+        if entry is None:
+            return
+        frame, ratio, image_getter = entry
+        path = image_getter()
+        if not path:
+            frame.set_placeholder("No image\n(open one on Wallpaper)")
+            return
+        fit = self._fits.get(key, imaging.FIT_FILL)
+        w = 480
+        h = max(1, round(w / ratio))
+        try:
+            img = imaging.transform(path, (w, h), fit)
+            frame.set_image(img)
+        except Exception:
+            frame.set_placeholder("Preview unavailable")
 
     # ---- helpers ----------------------------------------------------------
     def _aspect(self, mon) -> float:
@@ -200,14 +280,11 @@ class ScreensPage(BasePage):
                 return mon
         return self.state.monitors[0] if self.state.monitors else None
 
-    def _render(self, frame: MonitorFrame, path: str, ratio: float) -> None:
-        w = 480
-        h = max(1, round(w / ratio))
-        try:
-            img = imaging.transform(path, (w, h), imaging.FIT_FILL)
-            frame.set_image(img)
-        except Exception:
-            frame.set_placeholder("Preview unavailable")
+    def _res(self) -> str:
+        mon = self._primary_monitor()
+        if mon:
+            return f"{mon.px_width}x{mon.px_height}"
+        return "1920x1080"
 
     def _current_desktop_path(self) -> str | None:
         be = self.state.backend
@@ -227,8 +304,6 @@ class ScreensPage(BasePage):
             path = uri_to_path(raw) if not getattr(be, "uri_is_path", False) else raw
         except Exception:
             path = raw
-        from pathlib import Path
-
         return path if path and Path(path).exists() else None
 
     def _is_applied(self, connector: str) -> bool:
@@ -239,10 +314,30 @@ class ScreensPage(BasePage):
         return applied.get(connector) == img or applied.get("all") == img
 
     # ---- events -----------------------------------------------------------
-    def _on_set_here(self, _btn, connector: str) -> None:
-        self.state.set_target(connector)
-        self.win.apply(connector)
+    def _on_fit(self, btn, key: str, fit: str) -> None:
+        if btn.get_active():
+            self._fits[key] = fit
+            self._render_preview(key)
+
+    def _apply_desktop(self, fit_key: str, target: str) -> None:
+        # Apply via the desktop backend at this surface's chosen fit (no password).
+        self.state.fit = self._fits.get(fit_key, imaging.FIT_FILL)
+        self.state.target = target
+        self.win.apply(target)
         self._rebuild()
+
+    def _apply_privileged(self, surface_id: str) -> None:
+        if not self.state.image_path:
+            self.win.toast(_NO_IMAGE_HINT)
+            return
+        fit = self._fits.get(surface_id, imaging.FIT_FILL)
+        run_privileged(
+            self.win,
+            surface_id,
+            self.state.image_path,
+            fit,
+            res=self._res(),
+        )
 
     def refresh(self) -> None:
         self._rebuild()

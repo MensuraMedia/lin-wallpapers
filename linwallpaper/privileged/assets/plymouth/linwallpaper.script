@@ -1,0 +1,84 @@
+# linwallpaper.script — Plymouth boot/shutdown splash for LinWallpaper.
+# Shows the desktop wallpaper (zoomed to fill the screen, like Cinnamon's "zoom")
+# with a boot throbber (frames copied from the mint-logo theme).
+# Installed by linwallpaper/privileged/lw_privileged.py; wallpaper.png is generated there.
+
+Window.SetBackgroundTopColor(0, 0, 0);
+Window.SetBackgroundBottomColor(0, 0, 0);
+
+global.sw = Window.GetWidth();
+global.sh = Window.GetHeight();
+global.ox = Window.GetX();
+global.oy = Window.GetY();
+
+# --- wallpaper, "zoom" (cover) scaling -------------------------------------
+wall_src = Image("wallpaper.png");
+scale = Math.Max(global.sw / wall_src.GetWidth(), global.sh / wall_src.GetHeight());
+wall = wall_src.Scale(Math.Int(wall_src.GetWidth() * scale + 0.5), Math.Int(wall_src.GetHeight() * scale + 0.5));
+global.bg = Sprite(wall);
+global.bg.SetPosition(global.ox + Math.Int((global.sw - wall.GetWidth()) / 2), global.oy + Math.Int((global.sh - wall.GetHeight()) / 2), -100);
+
+# --- throbber, centered, looping -------------------------------------------
+global.frame_count = 30;
+for (i = 0; i < global.frame_count; i++) {
+  n = i + 1;
+  if (n < 10)
+    name = "throbber-000" + n + ".png";
+  else
+    name = "throbber-00" + n + ".png";
+  global.frames[i] = Image(name);
+}
+global.spinner = Sprite(global.frames[0]);
+global.spinner.SetPosition(global.ox + Math.Int((global.sw - global.frames[0].GetWidth()) / 2),
+                           global.oy + Math.Int(global.sh * 0.75 - global.frames[0].GetHeight() / 2), 10);
+global.tick = 0;
+
+fun refresh_callback() {
+  global.tick = global.tick + 1;
+  global.spinner.SetImage(global.frames[Math.Int(global.tick / 2) % global.frame_count]);
+}
+Plymouth.SetRefreshFunction(refresh_callback);
+
+# --- password / question prompts (e.g. encrypted volumes, fsck) ------------
+global.prompt_sprite = Sprite();
+global.entry_sprite = Sprite();
+
+fun show_prompt(prompt, text) {
+  p = Image.Text(prompt, 1, 1, 1);
+  global.prompt_sprite.SetImage(p);
+  global.prompt_sprite.SetPosition(global.ox + Math.Int((global.sw - p.GetWidth()) / 2), global.oy + Math.Int(global.sh * 0.84), 20);
+  e = Image.Text(text, 1, 1, 1);
+  global.entry_sprite.SetImage(e);
+  global.entry_sprite.SetPosition(global.ox + Math.Int((global.sw - e.GetWidth()) / 2), global.oy + Math.Int(global.sh * 0.84) + 28, 20);
+  global.prompt_sprite.SetOpacity(1);
+  global.entry_sprite.SetOpacity(1);
+}
+
+fun display_password_callback(prompt, bullets) {
+  stars = "";
+  for (i = 0; i < bullets; i++)
+    stars = stars + "*";
+  show_prompt(prompt, stars);
+}
+
+fun display_question_callback(prompt, entry) {
+  show_prompt(prompt, entry);
+}
+
+fun display_normal_callback() {
+  global.prompt_sprite.SetOpacity(0);
+  global.entry_sprite.SetOpacity(0);
+}
+
+Plymouth.SetDisplayPasswordFunction(display_password_callback);
+Plymouth.SetDisplayQuestionFunction(display_question_callback);
+Plymouth.SetDisplayNormalFunction(display_normal_callback);
+
+# --- status messages --------------------------------------------------------
+global.message_sprite = Sprite();
+fun message_callback(text) {
+  m = Image.Text(text, 1, 1, 1);
+  global.message_sprite.SetImage(m);
+  global.message_sprite.SetPosition(global.ox + Math.Int((global.sw - m.GetWidth()) / 2), global.oy + Math.Int(global.sh * 0.92), 20);
+}
+Plymouth.SetMessageFunction(message_callback);

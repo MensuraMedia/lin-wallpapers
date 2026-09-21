@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=LinWallpaper
+Description=Desktop wallpaper with a boot spinner (installed by LinWallpaper's privileged helper)
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/linwallpaper
+ScriptFile=/usr/share/plymouth/themes/linwallpaper/linwallpaper.script
