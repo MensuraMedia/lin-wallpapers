@@ -84,6 +84,17 @@ def test_collection_persists_across_instances(isolate, images):
     assert len(Collection().items()) == 4  # reloaded from collection.json
 
 
+def test_reload_picks_up_external_writes(isolate, images):
+    _d, paths = images
+    view = Collection()
+    assert len(view.items()) == 1  # just the built-in
+    # a separate process (the add-CLI) writes to the same index
+    Collection().add_paths(paths)
+    assert len(view.items()) == 1  # still stale in memory
+    view.reload()
+    assert len(view.items()) == 4  # now sees the external additions
+
+
 # ---- Settings ------------------------------------------------------------
 def test_settings_roundtrip(isolate):
     s = Settings()

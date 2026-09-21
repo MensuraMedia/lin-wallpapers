@@ -79,6 +79,18 @@ class Collection:
         self._paths: list[dict] = self._load()
 
     # ---- read -------------------------------------------------------------
+    @property
+    def index_path(self) -> Path:
+        return self._index_file
+
+    @property
+    def data_dir(self) -> Path:
+        return self._data_dir
+
+    def reload(self) -> None:
+        """Re-read the index from disk (e.g. after the add-CLI wrote to it)."""
+        self._paths = self._load()
+
     def items(self) -> list[Item]:
         """The built-in default first, then referenced files in add order."""
         out: list[Item] = []

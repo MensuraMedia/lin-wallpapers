@@ -48,6 +48,7 @@ class WallpaperPicker(Adw.Window):
         flow.set_margin_bottom(12)
         flow.set_margin_start(12)
         flow.set_margin_end(12)
+        state.collection.reload()  # pick up any external additions
         for item in state.collection.items():
             flow.append(self._tile(item))
 

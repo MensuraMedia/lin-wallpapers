@@ -61,11 +61,36 @@ class WallpaperPage(BasePage):
         outer.append(self.flow)
 
         self._populate()
+        self._install_monitor()
         return outer
 
     def refresh(self) -> None:
-        # Re-read the library so context-menu additions appear on return here.
+        # Re-read the library from disk so additions made elsewhere (the add-CLI
+        # / file-manager context menu) show up when this page is shown again.
         if hasattr(self, "flow"):
+            self.state.collection.reload()
+            self._populate()
+
+    def _install_monitor(self) -> None:
+        # Watch the library's data dir so an "Add to LinWallpaper" from the file
+        # manager appears here live, without needing to navigate away and back.
+        self._monitor = None
+        try:
+            data_dir = self.state.collection.data_dir
+            data_dir.mkdir(parents=True, exist_ok=True)
+            gdir = Gio.File.new_for_path(str(data_dir))
+            self._monitor = gdir.monitor_directory(Gio.FileMonitorFlags.NONE, None)
+            self._monitor.connect("changed", self._on_index_changed)
+        except Exception:
+            self._monitor = None
+
+    def _on_index_changed(self, _monitor, gfile, _other, _event) -> None:
+        try:
+            name = gfile.get_basename()
+        except Exception:
+            name = None
+        if name == self.state.collection.index_path.name:
+            self.state.collection.reload()
             self._populate()
 
     # ---- grid -------------------------------------------------------------
