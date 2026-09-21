@@ -62,6 +62,42 @@ def test_monitor_frame_pins_aspect():
     assert aspect.get_ratio() == pytest.approx(4 / 3)
 
 
+def test_monitor_frame_is_large_and_uncapped():
+    from linwallpaper.ui.monitor_frame import _MAX_WIDTH, MonitorFrame
+
+    # The bezel target width is large and the old min(..., 320) cap is gone, so
+    # the screen area takes the full target width at the requested ratio.
+    assert _MAX_WIDTH >= 460
+    frame = MonitorFrame(ratio=16 / 9)
+    overlay = next(w for w in _walk(frame) if isinstance(w, Gtk.Overlay))
+    width, _height = overlay.get_size_request()
+    assert width == _MAX_WIDTH
+
+
+def test_screens_monitors_share_one_aspect(tmp_path):
+    from linwallpaper.ui.monitor_frame import MonitorFrame
+
+    sample = tmp_path / "s.png"
+    Image.new("RGB", (800, 600), (30, 60, 90)).save(sample)
+    # A wide primary + a 16:9 secondary: every sim monitor must still use the
+    # primary's aspect so all cards render at the same shape and size.
+    monitors = [
+        MonitorInfo("DP-1", 2560, 1080, 1, 0, 0, True),
+        MonitorInfo("HDMI-1", 1920, 1080, 1, 2560, 0, False),
+    ]
+    page = _make_page(monitors, _FakeBackend(), image_path=str(sample))
+
+    primary_aspect = 2560 / 1080
+    # The recorded preview ratio for every surface is the primary aspect.
+    assert {round(r, 6) for (_f, r, _g) in page._previews.values()} == {
+        round(primary_aspect, 6)
+    }
+    # And every actual MonitorFrame widget carries that same ratio.
+    frames = [w for w in _walk(page) if isinstance(w, MonitorFrame)]
+    assert frames
+    assert all(f.ratio == pytest.approx(primary_aspect) for f in frames)
+
+
 def test_monitor_frame_placeholder_and_image(tmp_path):
     from linwallpaper.ui.monitor_frame import MonitorFrame
 

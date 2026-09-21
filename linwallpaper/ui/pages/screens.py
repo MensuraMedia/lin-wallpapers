@@ -34,7 +34,7 @@ _PRIVILEGED = (
     ("Boot menu", "GRUB menu background", "grub"),
 )
 
-_NO_IMAGE_HINT = "Open an image on the Wallpaper page first"
+_NO_IMAGE_HINT = "Open an image first"
 
 
 class ScreensPage(BasePage):
@@ -143,7 +143,7 @@ class ScreensPage(BasePage):
     # ---- desktop + lock (no password) -------------------------------------
     def _desktop_card(self, mon, current: str | None):
         key = mon.name
-        ratio = self._aspect(mon)
+        ratio = self._uniform_ratio()
         applied = self._is_applied(mon.name)
 
         def image_for() -> str | None:
@@ -170,8 +170,7 @@ class ScreensPage(BasePage):
         )
 
     def _lock_card(self, current: str | None):
-        primary = self._primary_monitor()
-        ratio = self._aspect(primary) if primary else 16 / 9
+        ratio = self._uniform_ratio()
 
         def image_for() -> str | None:
             return self.state.resolved_image("lock") or current
@@ -191,8 +190,7 @@ class ScreensPage(BasePage):
 
     # ---- privileged (root → password dialog) ------------------------------
     def _privileged_card(self, title: str, owner: str, surface_id: str):
-        primary = self._primary_monitor()
-        ratio = self._aspect(primary) if primary else 16 / 9
+        ratio = self._uniform_ratio()
 
         def image_for() -> str | None:
             return self.state.resolved_image(surface_id)
@@ -346,7 +344,7 @@ class ScreensPage(BasePage):
         frame, ratio, image_getter = entry
         path = image_getter()
         if not path:
-            frame.set_placeholder("No image\n(open one on Wallpaper)")
+            frame.set_placeholder("No image\n(open one above)")
             return
         fit = self._fits.get(key, imaging.FIT_FILL)
         w = 480
@@ -362,6 +360,15 @@ class ScreensPage(BasePage):
         if mon and mon.px_height:
             return mon.px_width / mon.px_height
         return 16 / 9
+
+    def _uniform_ratio(self) -> float:
+        """One aspect for EVERY sim monitor: the primary monitor's real aspect.
+
+        Using a single ratio across desktop/lock/login/splash/grub makes every
+        card's simulated monitor the same shape and size; each card's own real
+        resolution still shows in its meta text. Falls back to 16:9 headless.
+        """
+        return self._aspect(self._primary_monitor())
 
     def _primary_monitor(self):
         for mon in self.state.monitors:

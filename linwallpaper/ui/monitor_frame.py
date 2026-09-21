@@ -18,8 +18,9 @@ from gi.repository import Adw, Gtk
 
 from .imgutil import pil_to_texture, texture_from_file
 
-# Sensible cap so a single monitor never balloons on a very wide card.
-_MAX_WIDTH = 360
+# Target bezel width in px. Chosen so every sim monitor reads as a real,
+# comfortably large display; the AspectFrame keeps it proportional and centred.
+_MAX_WIDTH = 460
 
 
 class MonitorFrame(Gtk.Box):
@@ -80,16 +81,19 @@ class MonitorFrame(Gtk.Box):
         bezel.set_child(self._aspect)
         self.append(bezel)
 
-        # Stand + base beneath the bezel — purely cosmetic, centred.
+        # Stand + base beneath the bezel — purely cosmetic, centred. Their sizes
+        # scale with the bezel width so the whole monitor stays proportional as
+        # the target width changes.
+        bezel_w = self._max_width
         stand = Gtk.Box()
         stand.add_css_class("lw-monitor-stand")
         stand.set_halign(Gtk.Align.CENTER)
-        stand.set_size_request(56, 12)
+        stand.set_size_request(round(bezel_w * 0.175), round(bezel_w * 0.037))
         self.append(stand)
         base = Gtk.Box()
         base.add_css_class("lw-monitor-base")
         base.set_halign(Gtk.Align.CENTER)
-        base.set_size_request(120, 8)
+        base.set_size_request(round(bezel_w * 0.375), round(bezel_w * 0.024))
         self.append(base)
 
         # Start empty.
@@ -102,7 +106,7 @@ class MonitorFrame(Gtk.Box):
         The height is derived from the width so the monitor is always exactly the
         given aspect; ``halign=CENTER`` then centres it in whatever space it gets.
         """
-        base_w = min(self._max_width, 320)
+        base_w = self._max_width
         base_h = max(1, round(base_w / self._ratio))
         self._overlay.set_size_request(base_w, base_h)
 
