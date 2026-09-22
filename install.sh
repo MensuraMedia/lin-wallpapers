@@ -1,151 +1,126 @@
 #!/usr/bin/env bash
 #
-# install.sh — desktop integration for Lin Wallpapers.
+# install.sh — one-command installer for LinWallpaper (GTK 4 + libadwaita).
 #
-# Installs the launcher icon (into the hicolor icon theme) and the application's
-# .desktop entry (into the applications menu), then refreshes the icon and
-# desktop caches. This is *desktop integration only* — it does not install the
-# Python application itself; full distribution packaging arrives in the
-# packaging milestone. By default it launches the app from this source tree via
-# run.sh; override with --exec once a real launcher exists.
+#   git clone https://github.com/MensuraMedia/linwallpapers.git && bash linwallpapers/install.sh
 #
-# In keeping with the project's first rule, nothing here installs a service, a
-# daemon, an autostart entry or a login hook. There is no system tray.
+# 1. installs the runtime packages that are missing (Debian / Ubuntu / Linux Mint / Pop!_OS …, via apt;
+#    asks for sudo only when something is missing): python3-gi, gir1.2-gtk-4.0, gir1.2-adw-1,
+#    gir1.2-gdkpixbuf-2.0, python3-pil, and pkexec (for the login / boot-splash / GRUB screens)
+# 2. checks GTK 4, libadwaita and Pillow load (headless — no window opens)
+# 3. hands over to linwallpaper/install.sh for the menu entry + icons:
+#      default    user-level, runs from this checkout (update later with `git pull`), no root
+#      --system   copies the app to /usr/local (or --prefix DIR) + a `linwallpaper` command, for all users
+#
+# Nothing is installed as a service, daemon, autostart entry or login hook. Safe to re-run.
 #
 # Usage:
-#   ./install.sh [--user | --system] [--prefix DIR] [--exec CMD] [--uninstall]
+#   bash install.sh [--system [--prefix DIR]] [--no-deps] [--uninstall] [-h|--help]
 #
-#   --user        Install for the current user (default): $XDG_DATA_HOME or ~/.local/share
-#   --system      Install system-wide under --prefix (default /usr/local); needs write access
-#   --prefix DIR  Prefix for --system (default: /usr/local)
-#   --exec CMD    Command the .desktop entry runs (default: this tree's run.sh)
-#   --uninstall   Remove what a matching install placed
-#   -h, --help    Show this help
+#   --system      system-wide install (uses sudo for the copy)
+#   --prefix DIR  prefix for --system (default /usr/local)
+#   --no-deps     skip the package step (you installed the packages yourself)
+#   --uninstall   remove the menu entry + icons (and, with --system, the system copy); packages stay
 #
 set -eu
 
-APP_ID="io.mensuramedia.LinWallpapers"
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-ICON_SIZES="16 22 24 32 48 64 128 256"
+HERE="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+APP_INSTALLER="$HERE/linwallpaper/install.sh"
+PACKAGES="python3 python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 gir1.2-gdkpixbuf-2.0 python3-pil pkexec"
 
-MODE="user"
-PREFIX="/usr/local"
-EXEC_CMD=""
-ACTION="install"
-
-usage() {
-    sed -n '2,29p' "$0" | sed 's/^# \{0,1\}//'
-}
-
+SYSTEM=0; PREFIX=""; DEPS=1; UNINSTALL=0
 while [ $# -gt 0 ]; do
     case "$1" in
-        --user)      MODE="user" ;;
-        --system)    MODE="system" ;;
+        --system)    SYSTEM=1 ;;
         --prefix)    shift; PREFIX="${1:?--prefix needs a directory}" ;;
         --prefix=*)  PREFIX="${1#--prefix=}" ;;
-        --exec)      shift; EXEC_CMD="${1:?--exec needs a command}" ;;
-        --exec=*)    EXEC_CMD="${1#--exec=}" ;;
-        --uninstall) ACTION="uninstall" ;;
-        -h|--help)   usage; exit 0 ;;
-        *) printf 'install.sh: unknown option: %s\n' "$1" >&2; usage >&2; exit 2 ;;
+        --no-deps)   DEPS=0 ;;
+        --uninstall) UNINSTALL=1 ;;
+        -h|--help)   sed -n '2,24p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        *) printf 'install.sh: unknown option: %s (see --help)\n' "$1" >&2; exit 2 ;;
     esac
     shift
 done
 
-if [ "$MODE" = "system" ]; then
-    DATA_DIR="$PREFIX/share"
-else
-    DATA_DIR="${XDG_DATA_HOME:-$HOME/.local/share}"
+if [ -t 1 ]; then B=$(printf '\033[1m'); G=$(printf '\033[32m'); Y=$(printf '\033[33m'); R=$(printf '\033[31m'); N=$(printf '\033[0m')
+else B=""; G=""; Y=""; R=""; N=""; fi
+step() { printf '\n%s==> %s%s\n' "$B" "$*" "$N"; }
+ok()   { printf '    %sOK%s    %s\n' "$G" "$N" "$*"; }
+note() { printf '    %sNOTE%s  %s\n' "$Y" "$N" "$*"; }
+die()  { printf '    %sFAIL%s  %s\n' "$R" "$N" "$*" >&2; exit 1; }
+
+[ -f "$APP_INSTALLER" ] || die "linwallpaper/install.sh not found next to this script - run it from a full clone"
+if [ "$(id -u)" -eq 0 ] && [ -z "${SUDO_USER:-}" ] && [ "$SYSTEM" -eq 0 ]; then
+    die "run as your normal user (the menu entry is per-user); it asks for sudo when needed, or use --system"
+fi
+if [ "$(id -u)" -eq 0 ] && [ -n "${SUDO_USER:-}" ] && [ "$SYSTEM" -eq 0 ]; then
+    die "don't use sudo for the default install (it would install for root) - run: bash install.sh"
+fi
+SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
+
+run_app_installer() {
+    if [ "$SYSTEM" -eq 1 ]; then
+        # shellcheck disable=SC2086
+        $SUDO "$APP_INSTALLER" --system ${PREFIX:+--prefix "$PREFIX"} "$@"
+    else
+        "$APP_INSTALLER" "$@"
+    fi
+}
+
+if [ "$UNINSTALL" -eq 1 ]; then
+    step "Removing LinWallpaper"
+    run_app_installer --uninstall
+    ok "Removed (packages and your wallpaper library/settings were left in place)"
+    exit 0
 fi
 
-ICON_ROOT="$DATA_DIR/icons/hicolor"
-APP_DIR="$DATA_DIR/applications"
-SCALABLE="$ICON_ROOT/scalable/apps/$APP_ID.svg"
-SYMBOLIC="$ICON_ROOT/symbolic/apps/$APP_ID-symbolic.svg"
-DESKTOP_DEST="$APP_DIR/$APP_ID.desktop"
-
-SRC_SCALABLE="$SCRIPT_DIR/resources/icons/hicolor/scalable/apps/$APP_ID.svg"
-SRC_SYMBOLIC="$SCRIPT_DIR/resources/icons/hicolor/symbolic/apps/$APP_ID-symbolic.svg"
-SRC_DESKTOP="$SCRIPT_DIR/data/$APP_ID.desktop"
-
-refresh_caches() {
-    if command -v gtk-update-icon-cache >/dev/null 2>&1; then
-        gtk-update-icon-cache -q -t -f "$ICON_ROOT" 2>/dev/null || true
-    fi
-    if command -v update-desktop-database >/dev/null 2>&1; then
-        update-desktop-database -q "$APP_DIR" 2>/dev/null || true
-    fi
-}
-
-rasterize() {
-    # Emit PNGs for each size when a rasteriser is available; otherwise the
-    # scalable SVG alone is a valid hicolor install. Returns 1 if none found.
-    src="$1"
-    for size in $ICON_SIZES; do
-        dest="$ICON_ROOT/${size}x${size}/apps/$APP_ID.png"
-        mkdir -p "$(dirname "$dest")"
-        if command -v rsvg-convert >/dev/null 2>&1; then
-            rsvg-convert -w "$size" -h "$size" "$src" -o "$dest"
-        elif command -v inkscape >/dev/null 2>&1; then
-            inkscape "$src" --export-type=png --export-filename="$dest" \
-                -w "$size" -h "$size" >/dev/null 2>&1
-        elif command -v magick >/dev/null 2>&1; then
-            magick -background none "$src" -resize "${size}x${size}" "$dest"
-        elif command -v convert >/dev/null 2>&1; then
-            convert -background none "$src" -resize "${size}x${size}" "$dest"
-        else
-            return 1
-        fi
+step "Runtime packages"
+if [ "$DEPS" -eq 0 ]; then
+    note "skipped (--no-deps)"
+elif command -v apt-get >/dev/null 2>&1; then
+    missing=""
+    for p in $PACKAGES; do
+        dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q "install ok installed" || missing="$missing $p"
     done
-    return 0
-}
-
-do_install() {
-    for f in "$SRC_SCALABLE" "$SRC_SYMBOLIC" "$SRC_DESKTOP"; do
-        [ -f "$f" ] || { printf 'install.sh: missing source file: %s\n' "$f" >&2; exit 1; }
-    done
-
-    exec_line="${EXEC_CMD:-$SCRIPT_DIR/run.sh}"
-
-    install -Dm644 "$SRC_SCALABLE" "$SCALABLE"
-    install -Dm644 "$SRC_SYMBOLIC" "$SYMBOLIC"
-
-    if rasterize "$SRC_SCALABLE"; then
-        printf 'Rasterised PNG icons (%s).\n' "$ICON_SIZES"
+    if [ -z "$missing" ]; then
+        ok "all present: $PACKAGES"
     else
-        printf 'No SVG rasteriser found — installed the scalable icon only ' >&2
-        printf '(install librsvg2-bin, inkscape or imagemagick for PNGs).\n' >&2
+        printf '          installing:%s (sudo)\n' "$missing"
+        $SUDO apt-get update -qq || die "apt-get update failed (network?)"
+        # shellcheck disable=SC2086
+        if ! $SUDO env DEBIAN_FRONTEND=noninteractive apt-get install -y -qq $missing >/dev/null; then
+            die "apt-get could not install:$missing"
+        fi
+        ok "installed:$missing"
     fi
+else
+    note "not a Debian-family system - install these yourself, then re-run with --no-deps:"
+    note "  Fedora: sudo dnf install python3-gobject gtk4 libadwaita python3-pillow polkit"
+    note "  Arch:   sudo pacman -S python-gobject gtk4 libadwaita python-pillow polkit"
+fi
 
-    tmp="$(mktemp)"
-    trap 'rm -f "$tmp"' EXIT
-    grep -v '^Exec=' "$SRC_DESKTOP" > "$tmp"
-    printf 'Exec=%s\n' "$exec_line" >> "$tmp"
-    install -Dm644 "$tmp" "$DESKTOP_DEST"
-    rm -f "$tmp"
-    trap - EXIT
+step "Checking GTK 4, libadwaita and Pillow (no window opens)"
+if python3 - <<'EOF' 2>/dev/null
+import gi
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+from gi.repository import Adw, Gtk  # noqa: F401
+import PIL  # noqa: F401
+EOF
+then
+    ok "python3 $(python3 -c 'import platform; print(platform.python_version())'), GTK 4 and libadwaita importable"
+else
+    die "GTK 4 / libadwaita / Pillow not importable - install: $PACKAGES"
+fi
 
-    if command -v desktop-file-validate >/dev/null 2>&1; then
-        desktop-file-validate "$DESKTOP_DEST" || \
-            printf 'install.sh: desktop-file-validate reported warnings (non-fatal).\n' >&2
-    fi
+step "Menu entry and icons"
+if [ "$SYSTEM" -eq 1 ]; then
+    run_app_installer
+    ok "system install: launch from the menu, or run: linwallpaper"
+else
+    run_app_installer
+    ok "installed for $(id -un): launch LinWallpaper from the menu, or run: $HERE/linwallpaper/run.sh"
+    printf '          update later with: git -C %s pull   (no reinstall needed)\n' "$HERE"
+fi
 
-    refresh_caches
-    printf 'Installed Lin Wallpapers desktop integration:\n'
-    printf '  icon    %s\n' "$SCALABLE"
-    printf '  desktop %s  (Exec=%s)\n' "$DESKTOP_DEST" "$exec_line"
-}
-
-do_uninstall() {
-    rm -f "$SCALABLE" "$SYMBOLIC" "$DESKTOP_DEST"
-    for size in $ICON_SIZES; do
-        rm -f "$ICON_ROOT/${size}x${size}/apps/$APP_ID.png"
-    done
-    refresh_caches
-    printf 'Removed Lin Wallpapers desktop integration from %s\n' "$DATA_DIR"
-}
-
-case "$ACTION" in
-    install)   do_install ;;
-    uninstall) do_uninstall ;;
-esac
+printf '\n%s%sLinWallpaper is ready.%s\n' "$G" "$B" "$N"

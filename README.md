@@ -9,6 +9,25 @@ privileged screens ask for your password only when you apply to them.
 > Lives in [`linwallpaper/`](linwallpaper/). It is a clean rewrite; the older GTK 3 project under
 > `src/` is superseded and kept only for history.
 
+## Quick Install (One Command)
+
+```bash
+git clone https://github.com/MensuraMedia/linwallpapers.git && bash linwallpapers/install.sh
+```
+
+Installs the runtime packages that are missing (asks for your password only then), checks GTK 4 and
+libadwaita load, and adds **LinWallpaper** to your applications menu. It runs from the cloned folder, so
+**update with `git -C linwallpapers pull`**, with no reinstall. Works on Debian, Ubuntu, Linux Mint,
+Pop!_OS and derivatives. Other options:
+
+```bash
+bash linwallpapers/install.sh --system        # all users: copy to /usr/local + a `linwallpaper` command
+bash linwallpapers/install.sh --uninstall     # remove the menu entry (add --system for a system install)
+bash linwallpapers/install.sh --no-deps       # skip the package step (non-Debian: see --help)
+```
+
+To put it in a particular folder, `cd` there first (for example `cd ~/projects`) and run the same line.
+
 ## Install
 
 The app installs with one script — [`linwallpaper/install.sh`](linwallpaper/install.sh) — which adds a
@@ -16,7 +35,7 @@ menu entry and panel icon (user-level, no root). It uses your **system** Python 
 nothing to build and no virtualenv.
 
 ```bash
-# from a checkout
+# from a checkout (the one-command ./install.sh above also installs the packages first)
 ./linwallpaper/install.sh          # add the menu entry + icon (--uninstall to remove)
 python3 -m linwallpaper.main       # or: ./linwallpaper/run.sh — run without installing
 ```
