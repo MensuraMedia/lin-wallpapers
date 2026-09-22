@@ -129,16 +129,16 @@ install_icons() {
     # Prefer the PNGs shipped in the repo — reliable everywhere, including systems
     # whose SVG pixbuf loader is broken/missing (the panel can't show an SVG there).
     # Fall back to rasterising the SVG only if no PNGs are shipped.
-    installed_png=0
+    installed_sizes=""
     for size in $ICON_SIZES; do
         src_png="$SRC_ICON_ROOT/${size}x${size}/apps/$APP_ID.png"
         if [ -f "$src_png" ]; then
             install -Dm644 "$src_png" "$ICON_ROOT/${size}x${size}/apps/$APP_ID.png"
-            installed_png=1
+            installed_sizes="${installed_sizes:+$installed_sizes }$size"
         fi
     done
-    if [ "$installed_png" -eq 1 ]; then
-        printf 'Installed PNG icons (%s).\n' "$ICON_SIZES"
+    if [ -n "$installed_sizes" ]; then
+        printf 'Installed PNG icons (%s).\n' "$installed_sizes"
     elif rasterize "$SRC_SCALABLE"; then
         printf 'Rasterised PNG icons from the SVG (%s).\n' "$ICON_SIZES"
     else
