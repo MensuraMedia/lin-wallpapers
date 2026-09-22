@@ -25,7 +25,7 @@ and kept only for history (see the note at the bottom). Latest commit: `8059381`
 | **Settings → Integration** toggle installs an **"Add to LinWallpaper"** file-manager right-click action (Nemo live; Nautilus/Thunar/Dolphin providers built) | ✅ Nemo verified; others built |
 | **`python3 -m linwallpaper.addcli <paths>`** — the CLI the context action calls; adds files/folders to the library | ✅ verified |
 | **Live-refresh** — the Wallpaper page watches the library dir (`Gio.FileMonitor`); a file-manager "Add to LinWallpaper" appears **instantly**, no restart/navigation | ✅ verified (screenshots) |
-| **`install.sh` two modes** — user-level (run-from-checkout, default) and **`--system`** (copies the package to `PREFIX/lib/linwallpaper` + a `linwallpaper` launcher on PATH; `--prefix`, `--uninstall`) | ✅ both verified (temp prefix: install → run via launcher → uninstall) |
+| **`install.sh` two modes** — user-level (run-from-checkout, default) and **`--system`** (copies the package to `PREFIX/lib/linwallpaper` + a `linwallpaper` launcher on PATH; `--prefix`, `--uninstall`) | ✅ both verified; a real **`--system --prefix ~/.local`** install is **live on this box** (launches via the bare `linwallpaper` command, independent of the checkout) |
 | Each card meta: **Supported file types** + **Current resolution** under the screen name | ✅ |
 | Controls in **Image → Fit → Apply** order (per card and the global bar; Image shows the chosen filename) | ✅ |
 | Global bar (**Image** + **Fit** + **Apply to all** → every desktop monitor + lock) | ✅ |
@@ -57,6 +57,16 @@ and kept only for history (see the note at the bottom). Latest commit: `8059381`
   this: *"low priority at this time and can be addressed later."* Likely in the render precedence in
   `screens.py` (`resolved_image` → persisted `applied_image` → placeholder) and/or `applied.json`
   persistence in `state.py` — verify in the running app, not by tests.
+
+## Install state on this machine (2026-09-22)
+- A **system install to `~/.local`** is live: package at `~/.local/lib/linwallpaper`, launcher
+  `~/.local/bin/linwallpaper` (on PATH), menu entry `Exec=~/.local/bin/linwallpaper`. It replaced the
+  earlier run-from-checkout `.desktop`, so the menu now runs the installed copy (independent of the
+  checkout). `sudo` needs a password here, so `/usr/local` was not used; run
+  `sudo linwallpaper/install.sh --system` manually for an all-users install.
+- The **Nemo right-click action still points at the checkout** (`PYTHONPATH=…/lin-wallpapers`), because
+  it was enabled while running from there. It works while the checkout exists; toggle Settings →
+  Integration off/on in the installed app to repoint it at `~/.local`.
 
 ## Open items / known notes
 - Privileged render size defaults to **1920×1080** (or the primary monitor px) — a non-1080p greeter/boot
